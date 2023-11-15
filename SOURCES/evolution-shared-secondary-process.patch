@@ -1,0 +1,14 @@
+diff --git a/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp b/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
+index a30f5b13be26..72ad006cde21 100644
+--- a/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
++++ b/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
+@@ -438,6 +438,9 @@ static void webkitWebContextConstructed(GObject* object)
+     }
+     configuration.setTimeZoneOverride(String::fromUTF8(priv->timeZoneOverride.data(), priv->timeZoneOverride.length()));
+ 
++    if (!g_strcmp0(g_get_prgname(), "evolution"))
++        configuration.setUsesSingleWebProcess(true);
++
+ #if !ENABLE(2022_GLIB_API)
+     if (!priv->websiteDataManager)
+         priv->websiteDataManager = adoptGRef(webkit_website_data_manager_new("local-storage-directory", priv->localStorageDirectory.data(), nullptr));
