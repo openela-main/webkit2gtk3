@@ -11,8 +11,8 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.38.5
-Release:        1%{?dist}.3
+Version:        2.40.5
+Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -23,13 +23,6 @@ Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # $ gpg --import aperez.key carlosgc.key
 # $ gpg --export --export-options export-minimal D7FCF61CF9A2DEAB31D81BD3F3D322D0EC4582C3 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=2209208
-Patch0:         CVE-2023-28204.patch
-# https://bugzilla.redhat.com/show_bug.cgi?id=2185745
-Patch1:         CVE-2023-28205.patch
-# https://bugzilla.redhat.com/show_bug.cgi?id=2209214
-Patch2:         CVE-2023-32373.patch
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
@@ -43,6 +36,7 @@ BuildRequires:  gperf
 BuildRequires:  hyphen-devel
 BuildRequires:  libatomic
 BuildRequires:  ninja-build
+BuildRequires:  openssl-devel
 BuildRequires:  perl(English)
 BuildRequires:  perl(FindBin)
 BuildRequires:  perl(JSON::PP)
@@ -50,6 +44,7 @@ BuildRequires:  python3
 BuildRequires:  ruby
 BuildRequires:  rubygems
 BuildRequires:  rubygem-json
+BuildRequires:  unifdef
 BuildRequires:  xdg-dbus-proxy
 
 BuildRequires:  pkgconfig(atspi-2)
@@ -58,16 +53,19 @@ BuildRequires:  pkgconfig(egl)
 BuildRequires:  pkgconfig(enchant-2)
 BuildRequires:  pkgconfig(fontconfig)
 BuildRequires:  pkgconfig(freetype2)
+BuildRequires:  pkgconfig(gbm)
 BuildRequires:  pkgconfig(gl)
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(glesv2)
 BuildRequires:  pkgconfig(gobject-introspection-1.0)
 BuildRequires:  pkgconfig(gstreamer-1.0)
+BuildRequires:  pkgconfig(gstreamer-plugins-bad-1.0)
 BuildRequires:  pkgconfig(gstreamer-plugins-base-1.0)
 BuildRequires:  pkgconfig(gtk+-3.0)
 BuildRequires:  pkgconfig(harfbuzz)
 BuildRequires:  pkgconfig(icu-uc)
 BuildRequires:  pkgconfig(lcms2)
+BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libgcrypt)
 BuildRequires:  pkgconfig(libjpeg)
 BuildRequires:  pkgconfig(libnotify)
@@ -213,12 +211,11 @@ rm -rf Source/ThirdParty/qunit/
   -DCMAKE_BUILD_TYPE=Release \
   -DENABLE_JIT=OFF \
   -DUSE_SOUP2=ON \
+  -DUSE_AVIF=OFF \
   -DENABLE_DOCUMENTATION=OFF \
+  -DUSE_GSTREAMER_TRANSCODER=OFF \
 %if !0%{?with_gamepad}
   -DENABLE_GAMEPAD=OFF \
-%endif
-%if 0%{?fedora}
-  -DUSER_AGENT_BRANDING="Fedora" \
 %endif
 %if 0%{?rhel}
 %ifarch aarch64
@@ -234,12 +231,11 @@ export NINJA_STATUS="[%f/%t][%e] "
 %install
 %cmake_install
 
-%find_lang WebKit2GTK-4.0
+%find_lang WebKitGTK-4.0
 
 # Finally, copy over and rename various files for %%license inclusion
 %add_to_license_files Source/JavaScriptCore/COPYING.LIB
 %add_to_license_files Source/ThirdParty/ANGLE/LICENSE
-%add_to_license_files Source/ThirdParty/ANGLE/src/common/third_party/smhasher/LICENSE
 %add_to_license_files Source/ThirdParty/ANGLE/src/third_party/libXNVCtrl/LICENSE
 %add_to_license_files Source/WebCore/LICENSE-APPLE
 %add_to_license_files Source/WebCore/LICENSE-LGPL-2
@@ -251,7 +247,7 @@ export NINJA_STATUS="[%f/%t][%e] "
 %add_to_license_files Source/WTF/wtf/dtoa/COPYING
 %add_to_license_files Source/WTF/wtf/dtoa/LICENSE
 
-%files -f WebKit2GTK-4.0.lang
+%files -f WebKitGTK-4.0.lang
 %license _license_files/*ThirdParty*
 %license _license_files/*WebCore*
 %license _license_files/*WebInspectorUI*
@@ -295,20 +291,29 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
-* Tue Jul 11 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.38.5-1.3
+* Tue Aug 01 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.5-1
+- Update to 2.40.5
+  Related: #2176270
+
+* Fri Jul 21 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.4-1
+- Update to 2.40.4
+  Related: #2176270
+
+* Tue Jul 11 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.3-2
 - Disable JIT
-  Resolves: #2218792
-  Resolves: #2218802
+  Related: #2176270
 
-* Thu May 25 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.38.5-1.2
-- Add patch for CVE-2023-28204
-  Resolves: #2209747
-- Add patch for CVE-2023-32373
-  Resolves: #2209730
+* Wed Jun 28 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.3-1
+- Update to 2.40.3
+  Related: #2176270
 
-* Tue Apr 11 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.38.5-1.1
-- Add patch for CVE-2023-28205
-  Resolves: #2185745
+* Tue May 30 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.2-1
+- Update to 2.40.2
+  Related: #2176270
+
+* Thu May 04 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.1-1
+- Upgrade to 2.40.1
+  Resolves: #2176270
 
 * Wed Feb 15 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.38.5-1
 - Update to 2.38.5
