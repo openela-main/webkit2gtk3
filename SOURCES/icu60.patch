@@ -1,17 +1,3 @@
-From 833cfdd150b6f7f0fb021ac5de7890dff158f5fd Mon Sep 17 00:00:00 2001
-From: Michael Catanzaro <mcatanzaro@redhat.com>
-Date: Thu, 27 Oct 2022 16:32:43 -0500
-Subject: [PATCH] Build against ICU 60
-
----
- Source/JavaScriptCore/runtime/IntlCache.cpp        |  3 +++
- Source/JavaScriptCore/runtime/IntlCache.h          |  3 +++
- Source/JavaScriptCore/runtime/IntlDisplayNames.cpp | 11 +++++++++++
- Source/JavaScriptCore/runtime/IntlDisplayNames.h   |  7 +++++++
- Source/JavaScriptCore/runtime/IntlObject.cpp       |  6 +++++-
- Source/cmake/OptionsGTK.cmake                      |  2 +-
- 6 files changed, 30 insertions(+), 2 deletions(-)
-
 diff --git a/Source/JavaScriptCore/runtime/IntlCache.cpp b/Source/JavaScriptCore/runtime/IntlCache.cpp
 index b17d7340df56..94a5474059b6 100644
 --- a/Source/JavaScriptCore/runtime/IntlCache.cpp
@@ -62,7 +48,7 @@ index 058b2423786d..e7a8c82f392b 100644
  private:
      UDateTimePatternGenerator* getSharedPatternGenerator(const CString& locale, UErrorCode& status)
 diff --git a/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp b/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
-index c281f796eaee..1bc3c0c8a8c6 100644
+index f38161e7f95b..068613ce8feb 100644
 --- a/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
 +++ b/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
 @@ -110,6 +110,7 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
@@ -73,18 +59,20 @@ index c281f796eaee..1bc3c0c8a8c6 100644
      UErrorCode status = U_ZERO_ERROR;
  
      UDisplayContext contexts[] = {
-@@ -137,6 +138,10 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
+@@ -137,15 +138,19 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
          throwTypeError(globalObject, scope, "failed to initialize DisplayNames"_s);
          return;
      }
 +#else
-+        throwTypeError(globalObject, scope, "failed to initialize Intl.DisplayNames since feature is not supported by the ICU version"_s);
-+        return;
++    throwTypeError(globalObject, scope, "failed to initialize Intl.DisplayNames since feature is not supported by the ICU version"_s);
++    return;
 +#endif
  }
  
  // https://tc39.es/proposal-intl-displaynames/#sec-Intl.DisplayNames.prototype.of
-@@ -146,6 +151,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
+ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) const
+ {
+-
      VM& vm = globalObject->vm();
      auto scope = DECLARE_THROW_SCOPE(vm);
  
@@ -92,7 +80,7 @@ index c281f796eaee..1bc3c0c8a8c6 100644
      ASSERT(m_displayNames);
      auto code = codeValue.toWTFString(globalObject);
      RETURN_IF_EXCEPTION(scope, { });
-@@ -350,6 +356,11 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
+@@ -350,6 +355,11 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
          return throwTypeError(globalObject, scope, "Failed to query a display name."_s);
      }
      return jsString(vm, String(WTFMove(buffer)));
@@ -123,18 +111,18 @@ index d80dc3d83a15..f2bf36275c79 100644
  
  enum class RelevantExtensionKey : uint8_t;
 diff --git a/Source/JavaScriptCore/runtime/IntlObject.cpp b/Source/JavaScriptCore/runtime/IntlObject.cpp
-index f7dc4d578d77..a6ccbe1b9f74 100644
+index 0080abf51be4..d23c7c021334 100644
 --- a/Source/JavaScriptCore/runtime/IntlObject.cpp
 +++ b/Source/JavaScriptCore/runtime/IntlObject.cpp
-@@ -153,7 +153,6 @@ namespace JSC {
-   getCanonicalLocales   intlObjectFuncGetCanonicalLocales            DontEnum|Function 1
+@@ -164,7 +164,6 @@ namespace JSC {
+   supportedValuesOf     intlObjectFuncSupportedValuesOf              DontEnum|Function 1
    Collator              createCollatorConstructor                    DontEnum|PropertyCallback
    DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
 -  DisplayNames          createDisplayNamesConstructor                DontEnum|PropertyCallback
    Locale                createLocaleConstructor                      DontEnum|PropertyCallback
    NumberFormat          createNumberFormatConstructor                DontEnum|PropertyCallback
    PluralRules           createPluralRulesConstructor                 DontEnum|PropertyCallback
-@@ -239,6 +238,11 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
+@@ -252,6 +251,11 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject*)
      Base::finishCreation(vm);
      ASSERT(inherits(info()));
      JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
@@ -144,21 +132,38 @@ index f7dc4d578d77..a6ccbe1b9f74 100644
 +    UNUSED_PARAM(&createDisplayNamesConstructor);
 +#endif
  #if HAVE(ICU_U_LIST_FORMATTER)
-     putDirectWithoutTransition(vm, vm.propertyNames->ListFormat, createListFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
- #else
+     if (Options::useIntlDurationFormat())
+         putDirectWithoutTransition(vm, vm.propertyNames->DurationFormat, createDurationFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 5e653a9e0b5a..0977f2c49037 100644
+index 8bd6ed347418..9d0a7e88b16a 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -19,7 +19,7 @@ find_package(Freetype 2.4.2 REQUIRED)
+@@ -18,7 +18,7 @@ find_package(Fontconfig 2.8.0 REQUIRED)
+ find_package(Freetype 2.4.2 REQUIRED)
  find_package(LibGcrypt 1.6.0 REQUIRED)
- find_package(GLIB 2.56.4 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
  find_package(HarfBuzz 0.9.18 REQUIRED COMPONENTS ICU)
 -find_package(ICU 61.2 REQUIRED COMPONENTS data i18n uc)
-+find_package(ICU 60.2 REQUIRED COMPONENTS data i18n uc)
++find_package(ICU 60 REQUIRED COMPONENTS data i18n uc)
  find_package(JPEG REQUIRED)
+ find_package(LibEpoxy 1.4.0 REQUIRED)
  find_package(LibXml2 2.8.0 REQUIRED)
- find_package(PNG REQUIRED)
--- 
-2.31.1
-
+diff --git a/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp b/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp
+index fdcaa71f2011..f6aa1b0e3def 100644
+--- a/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp
++++ b/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp
+@@ -41,7 +41,6 @@
+ #endif
+ #endif
+ #include <unicode/ulistformatter.h>
+-#include <unicode/unumberformatter.h>
+ #include <unicode/ures.h>
+ #if HAVE(ICU_U_LIST_FORMATTER)
+ #define U_HIDE_DRAFT_API 1
+@@ -49,6 +48,7 @@
+ 
+ #if HAVE(ICU_U_LIST_FORMATTER)
+ #include <unicode/uformattedvalue.h>
++#include <unicode/unumberformatter.h>
+ #endif
+ 
+ namespace JSC {

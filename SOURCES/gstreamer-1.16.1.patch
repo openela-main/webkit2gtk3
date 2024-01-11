@@ -1,0 +1,57 @@
+diff --git a/Source/WebCore/platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp b/Source/WebCore/platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp
+index a861b913ccfc..df21a1f67e98 100644
+--- a/Source/WebCore/platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp
++++ b/Source/WebCore/platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp
+@@ -88,7 +88,25 @@ static void webKitGLVideoSinkConstructed(GObject* object)
+     ASSERT(colorconvert);
+     gst_bin_add_many(GST_BIN_CAST(sink), upload, colorconvert, sink->priv->appSink.get(), nullptr);
+ 
+-    GRefPtr<GstCaps> caps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) " GST_GL_CAPS_FORMAT));
++    // Workaround until we can depend on GStreamer 1.16.2.
++    // https://gitlab.freedesktop.org/gstreamer/gst-plugins-base/commit/8d32de090554cf29fe359f83aa46000ba658a693
++    // Forcing a color conversion to RGBA here allows glupload to internally use
++    // an uploader that adds a VideoMeta, through the TextureUploadMeta caps
++    // feature, without needing the patch above. However this specific caps
++    // feature is going to be removed from GStreamer so it is considered a
++    // short-term workaround. This code path most likely will have a negative
++    // performance impact on embedded platforms as well. Downstream embedders
++    // are highly encouraged to cherry-pick the patch linked above in their BSP
++    // and set the WEBKIT_GST_NO_RGBA_CONVERSION environment variable until
++    // GStreamer 1.16.2 is released.
++    // See also https://bugs.webkit.org/show_bug.cgi?id=201422
++    GRefPtr<GstCaps> caps;
++    if (webkitGstCheckVersion(1, 16, 2) || getenv("WEBKIT_GST_NO_RGBA_CONVERSION"))
++        caps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) " GST_GL_CAPS_FORMAT));
++    else {
++        GST_INFO_OBJECT(sink, "Forcing RGBA as GStreamer is not new enough.");
++        caps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) RGBA"));
++    }
+     gst_caps_set_features(caps.get(), 0, gst_caps_features_new(GST_CAPS_FEATURE_MEMORY_GL_MEMORY, nullptr));
+     g_object_set(sink->priv->appSink.get(), "caps", caps.get(), nullptr);
+
+diff --git a/Source/cmake/GStreamerChecks.cmake b/Source/cmake/GStreamerChecks.cmake
+index ba8423e2795c..df9d3204910d 100644
+--- a/Source/cmake/GStreamerChecks.cmake
++++ b/Source/cmake/GStreamerChecks.cmake
+@@ -36,7 +36,7 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
+               list(APPEND GSTREAMER_COMPONENTS webrtc)
+           endif ()
+ 
+-          find_package(GStreamer 1.16.2 REQUIRED COMPONENTS ${GSTREAMER_COMPONENTS})
++          find_package(GStreamer 1.16.0 REQUIRED COMPONENTS ${GSTREAMER_COMPONENTS})
+ 
+           if (ENABLE_WEB_AUDIO)
+               if (NOT PC_GSTREAMER_AUDIO_FOUND OR NOT PC_GSTREAMER_FFT_FOUND)
+
+diff --git a/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp b/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
+index 0b81e04559f0..4c6ae470e49f 100644
+--- a/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
++++ b/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
+@@ -479,7 +479,6 @@ bool MediaPlayerPrivateGStreamer::doSeek(const MediaTime& position, float rate)
+ 
+     auto seekStart = toGstClockTime(startTime);
+     auto seekStop = toGstClockTime(endTime);
+-    GST_DEBUG_OBJECT(pipeline(), "[Seek] Performing actual seek to %" GST_TIMEP_FORMAT " (endTime: %" GST_TIMEP_FORMAT ") at rate %f", &seekStart, &seekStop, rate);
+     return gst_element_seek(m_pipeline.get(), rate, GST_FORMAT_TIME, m_seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop);
+ }
+
