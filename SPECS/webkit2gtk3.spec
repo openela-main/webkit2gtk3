@@ -7,7 +7,7 @@
 
 Name:           webkit2gtk3
 Version:        2.40.5
-Release:        1%{?dist}
+Release:        1%{?dist}.1
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -30,6 +30,9 @@ Patch2:         glib-dep.patch
 
 # Partial revert of https://github.com/WebKit/WebKit/pull/6087
 Patch3:         gstreamer-1.16.1.patch
+
+# https://github.com/WebKit/WebKit/commit/00352dd86bfa102b6e4b792120e3ef3498a27d1e
+Patch4:         CVE-2023-42917.patch
 
 BuildRequires:  bison
 BuildRequires:  cmake
@@ -293,6 +296,10 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Tue Dec 05 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.5-1.1
+- Add patch for CVE-2023-42917
+  Resolves: RHEL-18172
+
 * Tue Aug 01 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.5-1
 - Upgrade to 2.40.5. Also, disable JIT
   Resolves: #2176269
