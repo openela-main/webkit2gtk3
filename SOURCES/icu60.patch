@@ -48,10 +48,10 @@ index 058b2423786d..e7a8c82f392b 100644
  private:
      UDateTimePatternGenerator* getSharedPatternGenerator(const CString& locale, UErrorCode& status)
 diff --git a/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp b/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
-index f38161e7f95b..068613ce8feb 100644
+index ed8dd34fdf44..9ec789b65413 100644
 --- a/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
 +++ b/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
-@@ -110,6 +110,7 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
+@@ -104,6 +104,7 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
      m_languageDisplay = intlOption<LanguageDisplay>(globalObject, options, vm.propertyNames->languageDisplay, { { "dialect"_s, LanguageDisplay::Dialect }, { "standard"_s, LanguageDisplay::Standard } }, "languageDisplay must be either \"dialect\" or \"standard\""_s, LanguageDisplay::Dialect);
      RETURN_IF_EXCEPTION(scope, void());
  
@@ -59,7 +59,7 @@ index f38161e7f95b..068613ce8feb 100644
      UErrorCode status = U_ZERO_ERROR;
  
      UDisplayContext contexts[] = {
-@@ -137,15 +138,19 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
+@@ -131,6 +132,10 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
          throwTypeError(globalObject, scope, "failed to initialize DisplayNames"_s);
          return;
      }
@@ -70,9 +70,7 @@ index f38161e7f95b..068613ce8feb 100644
  }
  
  // https://tc39.es/proposal-intl-displaynames/#sec-Intl.DisplayNames.prototype.of
- JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) const
- {
--
+@@ -140,6 +145,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
      VM& vm = globalObject->vm();
      auto scope = DECLARE_THROW_SCOPE(vm);
  
@@ -80,7 +78,7 @@ index f38161e7f95b..068613ce8feb 100644
      ASSERT(m_displayNames);
      auto code = codeValue.toWTFString(globalObject);
      RETURN_IF_EXCEPTION(scope, { });
-@@ -350,6 +355,11 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
+@@ -344,6 +350,11 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
          return throwTypeError(globalObject, scope, "Failed to query a display name."_s);
      }
      return jsString(vm, String(WTFMove(buffer)));
@@ -93,7 +91,7 @@ index f38161e7f95b..068613ce8feb 100644
  
  // https://tc39.es/proposal-intl-displaynames/#sec-Intl.DisplayNames.prototype.resolvedOptions
 diff --git a/Source/JavaScriptCore/runtime/IntlDisplayNames.h b/Source/JavaScriptCore/runtime/IntlDisplayNames.h
-index d80dc3d83a15..f2bf36275c79 100644
+index 2101c342865e..87a95a26f55c 100644
 --- a/Source/JavaScriptCore/runtime/IntlDisplayNames.h
 +++ b/Source/JavaScriptCore/runtime/IntlDisplayNames.h
 @@ -29,6 +29,13 @@
@@ -110,43 +108,6 @@ index d80dc3d83a15..f2bf36275c79 100644
  namespace JSC {
  
  enum class RelevantExtensionKey : uint8_t;
-diff --git a/Source/JavaScriptCore/runtime/IntlObject.cpp b/Source/JavaScriptCore/runtime/IntlObject.cpp
-index 0080abf51be4..d23c7c021334 100644
---- a/Source/JavaScriptCore/runtime/IntlObject.cpp
-+++ b/Source/JavaScriptCore/runtime/IntlObject.cpp
-@@ -164,7 +164,6 @@ namespace JSC {
-   supportedValuesOf     intlObjectFuncSupportedValuesOf              DontEnum|Function 1
-   Collator              createCollatorConstructor                    DontEnum|PropertyCallback
-   DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
--  DisplayNames          createDisplayNamesConstructor                DontEnum|PropertyCallback
-   Locale                createLocaleConstructor                      DontEnum|PropertyCallback
-   NumberFormat          createNumberFormatConstructor                DontEnum|PropertyCallback
-   PluralRules           createPluralRulesConstructor                 DontEnum|PropertyCallback
-@@ -252,6 +251,11 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject*)
-     Base::finishCreation(vm);
-     ASSERT(inherits(info()));
-     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
-+#if HAVE(ICU_U_LOCALE_DISPLAY_NAMES)
-+    putDirectWithoutTransition(vm, vm.propertyNames->DisplayNames, createDisplayNamesConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
-+#else
-+    UNUSED_PARAM(&createDisplayNamesConstructor);
-+#endif
- #if HAVE(ICU_U_LIST_FORMATTER)
-     if (Options::useIntlDurationFormat())
-         putDirectWithoutTransition(vm, vm.propertyNames->DurationFormat, createDurationFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
-diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 8bd6ed347418..9d0a7e88b16a 100644
---- a/Source/cmake/OptionsGTK.cmake
-+++ b/Source/cmake/OptionsGTK.cmake
-@@ -18,7 +18,7 @@ find_package(Fontconfig 2.8.0 REQUIRED)
- find_package(Freetype 2.4.2 REQUIRED)
- find_package(LibGcrypt 1.6.0 REQUIRED)
- find_package(HarfBuzz 0.9.18 REQUIRED COMPONENTS ICU)
--find_package(ICU 61.2 REQUIRED COMPONENTS data i18n uc)
-+find_package(ICU 60 REQUIRED COMPONENTS data i18n uc)
- find_package(JPEG REQUIRED)
- find_package(LibEpoxy 1.4.0 REQUIRED)
- find_package(LibXml2 2.8.0 REQUIRED)
 diff --git a/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp b/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp
 index fdcaa71f2011..f6aa1b0e3def 100644
 --- a/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp
@@ -167,3 +128,40 @@ index fdcaa71f2011..f6aa1b0e3def 100644
  #endif
  
  namespace JSC {
+diff --git a/Source/JavaScriptCore/runtime/IntlObject.cpp b/Source/JavaScriptCore/runtime/IntlObject.cpp
+index cba15c79bc45..9553eb6b263b 100644
+--- a/Source/JavaScriptCore/runtime/IntlObject.cpp
++++ b/Source/JavaScriptCore/runtime/IntlObject.cpp
+@@ -165,7 +165,6 @@ namespace JSC {
+   supportedValuesOf     intlObjectFuncSupportedValuesOf              DontEnum|Function 1
+   Collator              createCollatorConstructor                    DontEnum|PropertyCallback
+   DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
+-  DisplayNames          createDisplayNamesConstructor                DontEnum|PropertyCallback
+   Locale                createLocaleConstructor                      DontEnum|PropertyCallback
+   NumberFormat          createNumberFormatConstructor                DontEnum|PropertyCallback
+   PluralRules           createPluralRulesConstructor                 DontEnum|PropertyCallback
+@@ -253,6 +252,11 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject*)
+     Base::finishCreation(vm);
+     ASSERT(inherits(info()));
+     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
++#if HAVE(ICU_U_LOCALE_DISPLAY_NAMES)
++    putDirectWithoutTransition(vm, vm.propertyNames->DisplayNames, createDisplayNamesConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
++#else
++    UNUSED_PARAM(&createDisplayNamesConstructor);
++#endif
+ #if HAVE(ICU_U_LIST_FORMATTER)
+     if (Options::useIntlDurationFormat())
+         putDirectWithoutTransition(vm, vm.propertyNames->DurationFormat, createDurationFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
+diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
+index 526fe7cfe0cf..7b057f87b67e 100644
+--- a/Source/cmake/OptionsGTK.cmake
++++ b/Source/cmake/OptionsGTK.cmake
+@@ -18,7 +18,7 @@ find_package(Fontconfig 2.13.0 REQUIRED)
+ find_package(Freetype 2.9.0 REQUIRED)
+ find_package(LibGcrypt 1.6.0 REQUIRED)
+ find_package(HarfBuzz 1.4.2 REQUIRED COMPONENTS ICU)
+-find_package(ICU 61.2 REQUIRED COMPONENTS data i18n uc)
++find_package(ICU 60 REQUIRED COMPONENTS data i18n uc)
+ find_package(JPEG REQUIRED)
+ find_package(LibEpoxy 1.4.0 REQUIRED)
+ find_package(LibXml2 2.8.0 REQUIRED)

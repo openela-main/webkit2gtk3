@@ -1,0 +1,39 @@
+diff --git a/Tools/MiniBrowser/gtk/BrowserSettingsDialog.c b/Tools/MiniBrowser/gtk/BrowserSettingsDialog.c
+index ef000cd2b910..432c97257048 100644
+--- a/Tools/MiniBrowser/gtk/BrowserSettingsDialog.c
++++ b/Tools/MiniBrowser/gtk/BrowserSettingsDialog.c
+@@ -175,11 +175,12 @@ static void featureTreeViewRenderStatusData(GtkTreeViewColumn *column, GtkCellRe
+ {
+     g_autoptr(WebKitFeature) feature = NULL;
+     gtk_tree_model_get(model, iter, FEATURES_LIST_COLUMN_FEATURE, &feature, -1);
+-    g_autoptr(GEnumClass) enumClass = g_type_class_ref(WEBKIT_TYPE_FEATURE_STATUS);
++    GEnumClass *enumClass = g_type_class_ref(WEBKIT_TYPE_FEATURE_STATUS);
+     g_object_set(renderer,
+                  "markup", NULL,
+                  "text", g_enum_get_value(enumClass, webkit_feature_get_status(feature))->value_nick,
+                  NULL);
++    g_type_class_unref(enumClass);
+ }
+ 
+ static void featureTreeViewRenderCategoryData(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
+diff --git a/Tools/MiniBrowser/gtk/main.c b/Tools/MiniBrowser/gtk/main.c
+index 8be643a54151..ae82b41400b5 100644
+--- a/Tools/MiniBrowser/gtk/main.c
++++ b/Tools/MiniBrowser/gtk/main.c
+@@ -273,7 +273,7 @@ static gboolean parseFeaturesOptionCallback(const gchar *option, const gchar *va
+                 "features, prefixes '-' and '!' disable features. Names are case-insensitive. Example:\n"
+                 "\n    %s --features='!DirPseudo,+WebAnimationsCustomEffects,webgl'\n\n"
+                 "Available features (+/- = enabled/disabled by default):\n\n", g_get_prgname());
+-        g_autoptr(GEnumClass) statusEnum = g_type_class_ref(WEBKIT_TYPE_FEATURE_STATUS);
++        GEnumClass *statusEnum = g_type_class_ref(WEBKIT_TYPE_FEATURE_STATUS);
+         for (gsize i = 0; i < webkit_feature_list_get_length(featureList); i++) {
+             WebKitFeature *feature = webkit_feature_list_get(featureList, i);
+             g_print("  %c %s (%s)",
+@@ -284,6 +284,7 @@ static gboolean parseFeaturesOptionCallback(const gchar *option, const gchar *va
+                 g_print(": %s", webkit_feature_get_name(feature));
+             g_print("\n");
+         }
++        g_type_class_unref(statusEnum);
+         exit(EXIT_SUCCESS);
+     }
+

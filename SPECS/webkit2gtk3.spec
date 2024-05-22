@@ -6,8 +6,8 @@
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
 Name:           webkit2gtk3
-Version:        2.40.5
-Release:        1%{?dist}.1
+Version:        2.42.5
+Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -25,14 +25,17 @@ Patch0:         evolution-shared-secondary-process.patch
 # https://bugs.webkit.org/show_bug.cgi?id=235367
 Patch1:         icu60.patch
 
-# https://github.com/WebKit/WebKit/pull/14498
-Patch2:         glib-dep.patch
+# Partial revert of https://commits.webkit.org/256284@main
+Patch2:         gstreamer-1.16.1.patch
 
-# Partial revert of https://github.com/WebKit/WebKit/pull/6087
-Patch3:         gstreamer-1.16.1.patch
+# Partial revert of https://commits.webkit.org/260744@main
+Patch3:         cairo-1.15.patch
 
-# https://github.com/WebKit/WebKit/commit/00352dd86bfa102b6e4b792120e3ef3498a27d1e
-Patch4:         CVE-2023-42917.patch
+# Avoid dependency on GEnumClass_autoptr
+Patch4:         glib-2.56.patch
+
+# https://bugs.webkit.org/show_bug.cgi?id=268739
+Patch5:          i686-build.patch
 
 BuildRequires:  bison
 BuildRequires:  cmake
@@ -65,12 +68,11 @@ BuildRequires:  pkgconfig(enchant)
 %else
 BuildRequires:  pkgconfig(enchant-2)
 %endif
+BuildRequires:  pkgconfig(epoxy)
 BuildRequires:  pkgconfig(fontconfig)
 BuildRequires:  pkgconfig(freetype2)
 BuildRequires:  pkgconfig(gbm)
-BuildRequires:  pkgconfig(gl)
 BuildRequires:  pkgconfig(glib-2.0)
-BuildRequires:  pkgconfig(glesv2)
 BuildRequires:  pkgconfig(gobject-introspection-1.0)
 BuildRequires:  pkgconfig(gstreamer-1.0)
 BuildRequires:  pkgconfig(gstreamer-plugins-bad-1.0)
@@ -102,6 +104,9 @@ BuildRequires:  pkgconfig(wayland-server)
 BuildRequires:  pkgconfig(wpe-1.0)
 BuildRequires:  pkgconfig(wpebackend-fdo-1.0)
 BuildRequires:  pkgconfig(xt)
+
+# libepoxy will crash when WebKit tries using GLES2 if it's not installed.
+Requires:       libGLES
 
 # If Geoclue is not running, the geolocation API will not work.
 Recommends:     geoclue2
@@ -220,6 +225,7 @@ pushd %{_target_platform}
   -DUSE_AVIF=OFF \
   -DENABLE_DOCUMENTATION=OFF \
   -DUSE_GSTREAMER_TRANSCODER=OFF \
+  -DUSE_JPEGXL=OFF \
   -DENABLE_GAMEPAD=OFF \
 %if 0%{?rhel}
 %ifarch aarch64
@@ -296,9 +302,30 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
-* Tue Dec 05 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.5-1.1
-- Add patch for CVE-2023-42917
-  Resolves: RHEL-18172
+* Mon Feb 05 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.5-1
+- Update to 2.42.5
+  Resolves: RHEL-3961
+
+* Fri Dec 15 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.4-1
+- Update to 2.42.4
+  Resolves: RHEL-3961
+  Resolves: RHEL-19365
+
+* Tue Dec 05 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.3-1
+- Update to 2.42.3
+  Resolves: RHEL-3961
+
+* Fri Nov 10 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.2-1
+- Update to 2.42.2
+  Resolves: RHEL-3961
+
+* Wed Sep 27 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.1-1
+- Update to 2.42.1
+  Resolves: RHEL-3961
+
+* Wed Sep 20 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.0-1
+- Upgrade to 2.42.0
+  Resolves: RHEL-3961
 
 * Tue Aug 01 2023 Michael Catanzaro <mcatanzaro@redhat.com> - 2.40.5-1
 - Upgrade to 2.40.5. Also, disable JIT
