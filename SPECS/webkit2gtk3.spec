@@ -10,9 +10,18 @@
 %global with_gamepad 1
 %endif
 
+# FIXME: Clang is preferred: https://skia.org/docs/user/build/#supported-and-preferred-compilers
+# But Clang toolchain is broken on i686: https://issues.redhat.com/browse/RHEL-59586
+# So, for now we'll use GCC instead.
+
+# We run out of memory if building with LTO enabled on i686.
+%ifarch %{ix86}
+%global _lto_cflags %{nil}
+%endif
+
 Name:           webkit2gtk3
-Version:        2.42.5
-Release:        1%{?dist}
+Version:        2.46.1
+Release:        2%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -21,11 +30,19 @@ Source0:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz
 Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # Use the keys from https://webkitgtk.org/verifying.html
 # $ gpg --import aperez.key carlosgc.key
-# $ gpg --export --export-options export-minimal D7FCF61CF9A2DEAB31D81BD3F3D322D0EC4582C3 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
+# $ gpg --export --export-options export-minimal 013A0127AC9C65B34FFA62526C1009B693975393 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
 
-# https://bugs.webkit.org/show_bug.cgi?id=268739
-Patch:          i686-build.patch
+# Work around a missing implementation of musttail in clang for ppc64le
+# https://github.com/llvm/llvm-project/issues/108014
+Patch:          webkitgtk-skia-musttail.patch
+
+# https://bugs.webkit.org/show_bug.cgi?id=280044
+# Resolves: https://github.com/simd-everywhere/simde/issues/1211
+Patch:          simde.patch
+
+# Containing changes from: https://github.com/WebKit/WebKit/pull/34133
+Patch:          socket-monitor.patch
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
@@ -40,6 +57,7 @@ BuildRequires:  hyphen-devel
 BuildRequires:  libatomic
 BuildRequires:  ninja-build
 BuildRequires:  openssl-devel
+BuildRequires:  perl(bigint)
 BuildRequires:  perl(English)
 BuildRequires:  perl(FindBin)
 BuildRequires:  perl(JSON::PP)
@@ -71,7 +89,6 @@ BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libgcrypt)
 BuildRequires:  pkgconfig(libjpeg)
 BuildRequires:  pkgconfig(libnotify)
-BuildRequires:  pkgconfig(libopenjp2)
 BuildRequires:  pkgconfig(libpcre)
 BuildRequires:  pkgconfig(libpng)
 BuildRequires:  pkgconfig(libseccomp)
@@ -86,13 +103,12 @@ BuildRequires:  pkgconfig(libxslt)
 BuildRequires:  pkgconfig(manette-0.2)
 %endif
 BuildRequires:  pkgconfig(sqlite3)
+BuildRequires:  pkgconfig(sysprof-capture-4)
 BuildRequires:  pkgconfig(upower-glib)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-egl)
 BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  pkgconfig(wayland-server)
-BuildRequires:  pkgconfig(wpe-1.0)
-BuildRequires:  pkgconfig(wpebackend-fdo-1.0)
 BuildRequires:  pkgconfig(xt)
 
 # These are hard requirements of WebKit's bubblewrap sandbox.
@@ -133,6 +149,7 @@ Provides:       webkit2gtk3-doc = %{version}-%{release}
 # We're supposed to specify versions here, but these libraries don't do
 # normal releases. Accordingly, they're not suitable to be system libs.
 Provides:       bundled(angle)
+Provides:       bundled(skia)
 Provides:       bundled(xdgmime)
 
 # Require the jsc subpackage
@@ -215,11 +232,13 @@ rm -rf Source/ThirdParty/qunit/
   -DPORT=GTK \
   -DCMAKE_BUILD_TYPE=Release \
   -DENABLE_JIT=OFF \
+  -DUSE_GTK4=OFF \
   -DUSE_SOUP2=ON \
   -DUSE_AVIF=OFF \
   -DENABLE_DOCUMENTATION=OFF \
   -DUSE_GSTREAMER_TRANSCODER=OFF \
   -DUSE_JPEGXL=OFF \
+  -DUSE_LIBBACKTRACE=OFF \
 %if !0%{?with_gamepad}
   -DENABLE_GAMEPAD=OFF \
 %endif
@@ -297,6 +316,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Fri Oct 11 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.1-1
+- Update to 2.46.1
+
 * Mon Feb 05 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.5-1
 - Update to 2.42.5
   Resolves: RHEL-3960

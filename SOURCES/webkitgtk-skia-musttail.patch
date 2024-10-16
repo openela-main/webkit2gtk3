@@ -1,0 +1,49 @@
+diff -up webkitgtk-2.45.92/Source/ThirdParty/skia/include/private/base/SkFeatures.h.orig webkitgtk-2.45.92/Source/ThirdParty/skia/include/private/base/SkFeatures.h
+--- webkitgtk-2.45.92/Source/ThirdParty/skia/include/private/base/SkFeatures.h.orig	2024-09-12 08:22:24.667260964 +0000
++++ webkitgtk-2.45.92/Source/ThirdParty/skia/include/private/base/SkFeatures.h	2024-09-12 08:22:46.616832364 +0000
+@@ -69,6 +69,10 @@
+   #define SK_CPU_LOONGARCH 1
+ #endif
+ 
++#if defined(__powerpc__) || defined (__powerpc64__)
++  #define SK_CPU_PPC 1
++#endif
++
+ /**
+  *  SK_CPU_SSE_LEVEL
+  *
+diff -up webkitgtk-2.45.92/Source/ThirdParty/skia/src/core/SkRasterPipeline.h.orig webkitgtk-2.45.92/Source/ThirdParty/skia/src/core/SkRasterPipeline.h
+--- webkitgtk-2.45.92/Source/ThirdParty/skia/src/core/SkRasterPipeline.h.orig	2024-09-12 08:16:25.444163366 +0000
++++ webkitgtk-2.45.92/Source/ThirdParty/skia/src/core/SkRasterPipeline.h	2024-09-12 08:16:43.603797893 +0000
+@@ -27,7 +27,7 @@ struct SkImageInfo;
+ struct skcms_TransferFunction;
+ 
+ #if __has_cpp_attribute(clang::musttail) && !defined(__EMSCRIPTEN__) && !defined(SK_CPU_ARM32) && \
+-        !defined(SK_CPU_LOONGARCH)
++        !defined(SK_CPU_LOONGARCH) && !defined(SK_CPU_PPC)
+     #define SK_HAS_MUSTTAIL 1
+ #else
+     #define SK_HAS_MUSTTAIL 0
+diff -up webkitgtk-2.45.92/Source/ThirdParty/skia/modules/skcms/src/skcms_internals.h.orig webkitgtk-2.45.92/Source/ThirdParty/skia/modules/skcms/src/skcms_internals.h
+--- webkitgtk-2.45.92/Source/ThirdParty/skia/modules/skcms/src/skcms_internals.h.orig	2024-09-12 08:49:09.985808211 +0000
++++ webkitgtk-2.45.92/Source/ThirdParty/skia/modules/skcms/src/skcms_internals.h	2024-09-12 08:49:19.835612828 +0000
+@@ -48,6 +48,7 @@ extern "C" {
+                                                  && !defined(__arm__) \
+                                                  && !defined(__riscv) \
+                                                  && !defined(__loongarch__) \
++                                                 && !defined(__powerpc__) \
+                                                  && !defined(_WIN32) && !defined(__SYMBIAN32__)
+             #define SKCMS_HAS_MUSTTAIL 1
+         #endif
+diff -up webkitgtk-2.45.92/Source/WTF/wtf/Compiler.h.orig webkitgtk-2.45.92/Source/WTF/wtf/Compiler.h
+--- webkitgtk-2.45.92/Source/WTF/wtf/Compiler.h.orig	2024-09-12 09:14:10.775885415 +0000
++++ webkitgtk-2.45.92/Source/WTF/wtf/Compiler.h	2024-09-12 09:15:27.264379291 +0000
+@@ -271,7 +271,7 @@
+ /* MUST_TAIL_CALL */
+ 
+ #if !defined(MUST_TAIL_CALL) && defined(__cplusplus) && defined(__has_cpp_attribute)
+-#if __has_cpp_attribute(clang::musttail)
++#if __has_cpp_attribute(clang::musttail) && !defined(__powerpc__)
+ #define MUST_TAIL_CALL [[clang::musttail]]
+ #endif
+ #endif
