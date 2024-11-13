@@ -20,8 +20,8 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.46.1
-Release:        2%{?dist}
+Version:        2.46.3
+Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -33,16 +33,8 @@ Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # $ gpg --export --export-options export-minimal 013A0127AC9C65B34FFA62526C1009B693975393 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
 
-# Work around a missing implementation of musttail in clang for ppc64le
-# https://github.com/llvm/llvm-project/issues/108014
-Patch:          webkitgtk-skia-musttail.patch
-
-# https://bugs.webkit.org/show_bug.cgi?id=280044
-# Resolves: https://github.com/simd-everywhere/simde/issues/1211
-Patch:          simde.patch
-
-# Containing changes from: https://github.com/WebKit/WebKit/pull/34133
-Patch:          socket-monitor.patch
+# Don't print warning about Evolution's use of WEBKIT_FORCE_SANDBOX
+Patch:          evolution-sandbox-warning.patch
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
@@ -149,6 +141,7 @@ Provides:       webkit2gtk3-doc = %{version}-%{release}
 # We're supposed to specify versions here, but these libraries don't do
 # normal releases. Accordingly, they're not suitable to be system libs.
 Provides:       bundled(angle)
+Provides:       bundled(pdfjs)
 Provides:       bundled(skia)
 Provides:       bundled(xdgmime)
 
@@ -180,6 +173,8 @@ files for developing applications that use %{name}.
 Summary:        JavaScript engine from %{name}
 Obsoletes:      webkitgtk4-jsc < %{version}-%{release}
 Provides:       webkitgtk4-jsc = %{version}-%{release}
+Provides:       bundled(simde)
+Provides:       bundled(simdutf)
 
 %description    jsc
 This package contains JavaScript engine from %{name}.
@@ -316,8 +311,37 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
-* Fri Oct 11 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.1-1
+* Wed Oct 30 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.3-1
+- Update to 2.46.3
+
+* Mon Oct 21 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.2-1
+- Update to 2.46.2
+- Add patch to disable Evolution sandbox warning
+
+* Thu Oct 10 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.1-2
+- Add patch to keep GSocketMonitor callback alive
+  Resolves: RHEL-59185
+
+* Tue Oct 8 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.1-1
 - Update to 2.46.1
+  Resolves: RHEL-59185
+
+* Thu Aug 15 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.44.3-2
+- Add patch to fix WebAssembly
+  Resolves: RHEL-32578
+
+* Tue Aug 13 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.44.3-1
+- Update to 2.44.3
+  Resolves: RHEL-32578
+
+* Thu May 16 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.44.2-1
+- Update to 2.44.2
+  Resolves: RHEL-32578
+
+* Thu Apr 11 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.44.1-1
+- Update to 2.44.1
+  Resolves: RHEL-32578
+  Resolves: RHEL-29637 
 
 * Mon Feb 05 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.5-1
 - Update to 2.42.5
