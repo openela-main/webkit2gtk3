@@ -1,10 +1,10 @@
 diff --git a/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp b/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
-index a30f5b13be26..72ad006cde21 100644
+index 65cf0eb2b99a..518cc953edca 100644
 --- a/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
 +++ b/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
-@@ -438,6 +438,9 @@ static void webkitWebContextConstructed(GObject* object)
+@@ -450,6 +450,9 @@ static void webkitWebContextConstructed(GObject* object)
      }
-     configuration.setTimeZoneOverride(String::fromUTF8(priv->timeZoneOverride.data(), priv->timeZoneOverride.length()));
+     configuration.setTimeZoneOverride(String::fromUTF8(priv->timeZoneOverride.span()));
  
 +    if (!g_strcmp0(g_get_prgname(), "evolution"))
 +        configuration.setUsesSingleWebProcess(true);

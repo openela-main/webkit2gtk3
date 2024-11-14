@@ -5,58 +5,75 @@
         mkdir -p _license_files ; \
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
+# There is a special buildroot required to build this package:
+# $ rhpkg build --target rhel-8.10.0-z-webkitgtk-stack-gate
+
 Name:           webkit2gtk3
-Version:        2.42.5
+Version:        2.46.3
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
-URL:            http://www.webkitgtk.org/
-Source0:        http://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz
+URL:            https://www.webkitgtk.org/
+Source0:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz
 Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # Use the keys from https://webkitgtk.org/verifying.html
 # $ gpg --import aperez.key carlosgc.key
-# $ gpg --export --export-options export-minimal D7FCF61CF9A2DEAB31D81BD3F3D322D0EC4582C3 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
+# $ gpg --export --export-options export-minimal 013A0127AC9C65B34FFA62526C1009B693975393 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
 
-# https://bugs.webkit.org/show_bug.cgi?id=193749
-Patch0:         evolution-shared-secondary-process.patch
+##
+## Patches to support older build toolchain
+##
 
-# https://bugs.webkit.org/show_bug.cgi?id=235367
-Patch1:         icu60.patch
+Patch100:       compiler-flags.patch
+Patch101:       s390x-build.patch
 
-# Partial revert of https://commits.webkit.org/256284@main
-Patch2:         gstreamer-1.16.1.patch
+##
+## Patches to support older or missing build dependencies
+##
 
-# Partial revert of https://commits.webkit.org/260744@main
-Patch3:         cairo-1.15.patch
+Patch200:       cairo-1.15.patch
+Patch201:       glib-2.56.patch
+Patch202:       gstreamer-1.16.patch
+Patch203:       harfbuzz-1.7.5.patch
+Patch204:       icu60.patch
 
-# Avoid dependency on GEnumClass_autoptr
-Patch4:         glib-2.56.patch
+##
+## Patches to support older Evolution
+##
 
-# https://bugs.webkit.org/show_bug.cgi?id=268739
-Patch5:          i686-build.patch
+Patch300:       evolution-shared-secondary-process.patch
+Patch301:       evolution-sandbox-warning.patch
+
+##
+## Patches that need to be upstreamed
+##
+
+# https://bugs.webkit.org/show_bug.cgi?id=282645
+Patch400:        websocket-connection-spans.patch
 
 BuildRequires:  bison
 BuildRequires:  cmake
 BuildRequires:  flex
 BuildRequires:  gcc-c++
-BuildRequires:  gcc-toolset-13
+BuildRequires:  gcc-toolset-14
 BuildRequires:  gettext
 BuildRequires:  git
+BuildRequires:  gnupg2
 BuildRequires:  gperf
 BuildRequires:  hyphen-devel
 BuildRequires:  libatomic
 BuildRequires:  ninja-build
 BuildRequires:  openssl-devel
+BuildRequires:  perl(bigint)
 BuildRequires:  perl(English)
 BuildRequires:  perl(FindBin)
 BuildRequires:  perl(JSON::PP)
 BuildRequires:  python3
 BuildRequires:  ruby
-BuildRequires:  rubygem-json
 BuildRequires:  rubygems
-BuildRequires:  shadow-utils
+BuildRequires:  rubygem-json
 BuildRequires:  unifdef
 
 BuildRequires:  pkgconfig(atspi-2)
@@ -84,7 +101,6 @@ BuildRequires:  pkgconfig(lcms2)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libjpeg)
 BuildRequires:  pkgconfig(libnotify)
-BuildRequires:  pkgconfig(libopenjp2)
 BuildRequires:  pkgconfig(libpcre)
 BuildRequires:  pkgconfig(libpng)
 BuildRequires:  pkgconfig(libseccomp)
@@ -101,8 +117,6 @@ BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-egl)
 BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  pkgconfig(wayland-server)
-BuildRequires:  pkgconfig(wpe-1.0)
-BuildRequires:  pkgconfig(wpebackend-fdo-1.0)
 BuildRequires:  pkgconfig(xt)
 
 # libepoxy will crash when WebKit tries using GLES2 if it's not installed.
@@ -136,6 +150,8 @@ Provides:       webkit2gtk3-doc = %{version}-%{release}
 # We're supposed to specify versions here, but these libraries don't do
 # normal releases. Accordingly, they're not suitable to be system libs.
 Provides:       bundled(angle)
+Provides:       bundled(pdfjs)
+Provides:       bundled(skia)
 Provides:       bundled(xdgmime)
 
 # Require the jsc subpackage
@@ -166,6 +182,8 @@ files for developing applications that use %{name}.
 Summary:        JavaScript engine from %{name}
 Obsoletes:      webkitgtk4-jsc < %{version}-%{release}
 Provides:       webkitgtk4-jsc = %{version}-%{release}
+Provides:       bundled(simde)
+Provides:       bundled(simdutf)
 
 %description    jsc
 This package contains JavaScript engine from %{name}.
@@ -182,7 +200,7 @@ files for developing applications that use JavaScript engine from %{name}.
 
 %prep
 %{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data='%{SOURCE0}'
-%autosetup -p1 -n webkitgtk-%{version} -S git
+%autosetup -p1 -n webkitgtk-%{version}
 
 # Remove bundled libraries
 rm -rf Source/ThirdParty/gtest/
@@ -205,42 +223,44 @@ rm -rf Source/ThirdParty/qunit/
 %global optflags %(echo %{optflags} | sed 's/-g /-g1 /')
 %endif
 
-# The system GCC is too old to build WebKit, so use a GCC Toolset instead.
-# This prints warnings complaining that it should not be used except in
-# SCL scriplets, but I can't figure out any other way to make it work.
-source scl_source enable gcc-toolset-13
+# FIXME: Clang is preferred: https://skia.org/docs/user/build/#supported-and-preferred-compilers
+# But we aren't using it in RHEL 9 because it's broken there: https://issues.redhat.com/browse/RHEL-59586
+# In RHEL 8, I haven't yet figured out whether we can use LLVM Toolset to build.
+# So for now we'll use GCC instead.
+%enable_devtoolset14
 
 # -DUSE_SYSTEM_MALLOC=ON is really bad for security, but libpas requires
-# __atomic_compare_exchange_16 which does not seem to be available.
-mkdir -p %{_target_platform}
-pushd %{_target_platform}
+# __atomic_compare_exchange_16 which is not available in RHEL 8.
 %cmake \
   -GNinja \
   -DPORT=GTK \
   -DCMAKE_BUILD_TYPE=Release \
-  -DUSE_SYSTEM_MALLOC=ON \
-  -DENABLE_JIT=OFF \
   -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
-  -DUSE_SOUP2=ON \
-  -DUSE_AVIF=OFF \
   -DENABLE_DOCUMENTATION=OFF \
-  -DUSE_GSTREAMER_TRANSCODER=OFF \
-  -DUSE_JPEGXL=OFF \
   -DENABLE_GAMEPAD=OFF \
+  -DENABLE_JIT=OFF \
+  -DENABLE_WEB_CODECS=OFF \
+  -DUSE_AVIF=OFF \
+  -DUSE_GSTREAMER_TRANSCODER=OFF \
+  -DUSE_GTK4=OFF \
+  -DUSE_JPEGXL=OFF \
+  -DUSE_LIBBACKTRACE=OFF \
+  -DUSE_SOUP2=ON \
+  -DUSE_SYSTEM_MALLOC=ON \
+  -DUSE_SYSTEM_SYSPROF_CAPTURE=OFF \
 %if 0%{?rhel}
 %ifarch aarch64
   -DUSE_64KB_PAGE_BLOCK=ON \
 %endif
 %endif
-  ..
-popd
+  %{nil}
 
 # Show the build time in the status
 export NINJA_STATUS="[%f/%t][%e] "
-%ninja_build -C %{_target_platform}
+%cmake_build
 
 %install
-%ninja_install -C %{_target_platform}
+%cmake_install
 
 %find_lang WebKitGTK-4.0
 
@@ -302,6 +322,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Fri Nov 08 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.3-1
+- Update to 2.46.3
+
 * Mon Feb 05 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.42.5-1
 - Update to 2.42.5
   Resolves: RHEL-3961

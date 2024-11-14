@@ -1,0 +1,26 @@
+diff --git a/Source/WebCore/platform/graphics/skia/SkiaHarfBuzzFont.cpp b/Source/WebCore/platform/graphics/skia/SkiaHarfBuzzFont.cpp
+index 8bc21b21976c..68654f602c92 100644
+--- a/Source/WebCore/platform/graphics/skia/SkiaHarfBuzzFont.cpp
++++ b/Source/WebCore/platform/graphics/skia/SkiaHarfBuzzFont.cpp
+@@ -101,9 +101,10 @@ static HbUniquePtr<hb_face_t> createHarfBuzzFace(SkTypeface& typeface)
+             HbUniquePtr<hb_blob_t> blob(hb_blob_create(reinterpret_cast<const char*>(memory), size, HB_MEMORY_MODE_READONLY, stream.release(), [](void* data) {
+                 delete reinterpret_cast<SkStreamAsset*>(data);
+             }));
+-            auto faceCount = hb_face_count(blob.get());
+-            if (faceCount && static_cast<unsigned>(index) < faceCount)
+-                return HbUniquePtr<hb_face_t>(hb_face_create(blob.get(), index));
++            HbUniquePtr<hb_face_t> result(hb_face_create(blob.get(), index));
++            HbUniquePtr<hb_face_t> empty(hb_face_get_empty());
++            if (result.get() != empty.get())
++                return result;
+         }
+     }
+ 
+@@ -126,6 +127,7 @@ SkiaHarfBuzzFont::SkiaHarfBuzzFont(SkTypeface& typeface)
+ {
+     auto hbFace = createHarfBuzzFace(typeface);
+     HbUniquePtr<hb_font_t> hbFont(hb_font_create(hbFace.get()));
++    hb_ot_font_set_funcs(hbFont.get());
+ 
+     if (int axisCount = typeface.getVariationDesignPosition(nullptr, 0)) {
+         Vector<SkFontArguments::VariationPosition::Coordinate> axisValues(axisCount);

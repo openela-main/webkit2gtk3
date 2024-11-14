@@ -1,0 +1,26 @@
+diff --git a/Source/ThirdParty/libsysprof-capture/CMakeLists.txt b/Source/ThirdParty/libsysprof-capture/CMakeLists.txt
+index 7ea8f0469ad7..13a9e390643a 100644
+--- a/Source/ThirdParty/libsysprof-capture/CMakeLists.txt
++++ b/Source/ThirdParty/libsysprof-capture/CMakeLists.txt
+@@ -46,6 +46,7 @@ target_link_libraries(SysProfCapture
+ 
+ WEBKIT_ADD_TARGET_C_FLAGS(SysProfCapture
+     -Wno-implicit-function-declaration
++    -Wno-int-conversion
+     -Wno-sign-compare
+     -Wno-unused-parameter
+ )
+diff --git a/Source/cmake/WebKitCompilerFlags.cmake b/Source/cmake/WebKitCompilerFlags.cmake
+index f5ec0a55919b..cf307eac2775 100644
+--- a/Source/cmake/WebKitCompilerFlags.cmake
++++ b/Source/cmake/WebKitCompilerFlags.cmake
+@@ -184,8 +184,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
+                                          -Wno-misleading-indentation
+                                          -Wno-psabi)
+ 
+-    # GCC < 12.0 gives false warnings for mismatched-new-delete <https://webkit.org/b/241516>
+-    if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0.0"))
++    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-mismatched-new-delete)
+         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-uninitialized)
+     endif ()

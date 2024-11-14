@@ -1,5 +1,5 @@
 diff --git a/Source/JavaScriptCore/runtime/IntlCache.cpp b/Source/JavaScriptCore/runtime/IntlCache.cpp
-index b17d7340df56..94a5474059b6 100644
+index 0941a7278e2a..75134587adbb 100644
 --- a/Source/JavaScriptCore/runtime/IntlCache.cpp
 +++ b/Source/JavaScriptCore/runtime/IntlCache.cpp
 @@ -26,6 +26,7 @@
@@ -7,10 +7,10 @@ index b17d7340df56..94a5474059b6 100644
  #include "IntlCache.h"
  
 +#include "IntlDisplayNames.h"
+ #include <wtf/TZoneMallocInlines.h>
  #include <wtf/Vector.h>
  
- namespace JSC {
-@@ -53,6 +54,7 @@ Vector<UChar, 32> IntlCache::getBestDateTimePattern(const CString& locale, const
+@@ -56,6 +57,7 @@ Vector<UChar, 32> IntlCache::getBestDateTimePattern(const CString& locale, std::
      return patternBuffer;
  }
  
@@ -18,7 +18,7 @@ index b17d7340df56..94a5474059b6 100644
  Vector<UChar, 32> IntlCache::getFieldDisplayName(const CString& locale, UDateTimePatternField field, UDateTimePGDisplayWidth width, UErrorCode& status)
  {
      auto sharedGenerator = getSharedPatternGenerator(locale, status);
-@@ -64,5 +66,6 @@ Vector<UChar, 32> IntlCache::getFieldDisplayName(const CString& locale, UDateTim
+@@ -67,5 +69,6 @@ Vector<UChar, 32> IntlCache::getFieldDisplayName(const CString& locale, UDateTim
          return { };
      return buffer;
  }
@@ -26,7 +26,7 @@ index b17d7340df56..94a5474059b6 100644
  
  } // namespace JSC
 diff --git a/Source/JavaScriptCore/runtime/IntlCache.h b/Source/JavaScriptCore/runtime/IntlCache.h
-index 058b2423786d..e7a8c82f392b 100644
+index 4c818fd59424..2c7e464a6955 100644
 --- a/Source/JavaScriptCore/runtime/IntlCache.h
 +++ b/Source/JavaScriptCore/runtime/IntlCache.h
 @@ -25,6 +25,7 @@
@@ -36,11 +36,11 @@ index 058b2423786d..e7a8c82f392b 100644
 +#include "IntlDisplayNames.h"
  #include <unicode/udatpg.h>
  #include <wtf/Noncopyable.h>
- #include <wtf/text/CString.h>
-@@ -39,7 +40,9 @@ public:
+ #include <wtf/TZoneMalloc.h>
+@@ -40,7 +41,9 @@ public:
      IntlCache() = default;
  
-     Vector<UChar, 32> getBestDateTimePattern(const CString& locale, const UChar* skeleton, unsigned skeletonSize, UErrorCode&);
+     Vector<UChar, 32> getBestDateTimePattern(const CString& locale, std::span<const UChar> skeleton, UErrorCode&);
 +#if HAVE(ICU_U_LOCALE_DISPLAY_NAMES)
      Vector<UChar, 32> getFieldDisplayName(const CString& locale, UDateTimePatternField, UDateTimePGDisplayWidth, UErrorCode&);
 +#endif
@@ -48,7 +48,7 @@ index 058b2423786d..e7a8c82f392b 100644
  private:
      UDateTimePatternGenerator* getSharedPatternGenerator(const CString& locale, UErrorCode& status)
 diff --git a/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp b/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
-index ed8dd34fdf44..9ec789b65413 100644
+index 2af8cdd5cfa9..c78c94e5e054 100644
 --- a/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
 +++ b/Source/JavaScriptCore/runtime/IntlDisplayNames.cpp
 @@ -104,6 +104,7 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
@@ -109,10 +109,10 @@ index 2101c342865e..87a95a26f55c 100644
  
  enum class RelevantExtensionKey : uint8_t;
 diff --git a/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp b/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp
-index fdcaa71f2011..f6aa1b0e3def 100644
+index 1423760a9593..d15f4db69c47 100644
 --- a/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp
 +++ b/Source/JavaScriptCore/runtime/IntlDurationFormat.cpp
-@@ -41,7 +41,6 @@
+@@ -42,7 +42,6 @@
  #endif
  #endif
  #include <unicode/ulistformatter.h>
@@ -120,7 +120,7 @@ index fdcaa71f2011..f6aa1b0e3def 100644
  #include <unicode/ures.h>
  #if HAVE(ICU_U_LIST_FORMATTER)
  #define U_HIDE_DRAFT_API 1
-@@ -49,6 +48,7 @@
+@@ -50,6 +49,7 @@
  
  #if HAVE(ICU_U_LIST_FORMATTER)
  #include <unicode/uformattedvalue.h>
@@ -129,10 +129,10 @@ index fdcaa71f2011..f6aa1b0e3def 100644
  
  namespace JSC {
 diff --git a/Source/JavaScriptCore/runtime/IntlObject.cpp b/Source/JavaScriptCore/runtime/IntlObject.cpp
-index cba15c79bc45..9553eb6b263b 100644
+index 5850a14d8876..ca4f8b3ca79a 100644
 --- a/Source/JavaScriptCore/runtime/IntlObject.cpp
 +++ b/Source/JavaScriptCore/runtime/IntlObject.cpp
-@@ -165,7 +165,6 @@ namespace JSC {
+@@ -166,7 +166,6 @@ namespace JSC {
    supportedValuesOf     intlObjectFuncSupportedValuesOf              DontEnum|Function 1
    Collator              createCollatorConstructor                    DontEnum|PropertyCallback
    DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
@@ -140,7 +140,7 @@ index cba15c79bc45..9553eb6b263b 100644
    Locale                createLocaleConstructor                      DontEnum|PropertyCallback
    NumberFormat          createNumberFormatConstructor                DontEnum|PropertyCallback
    PluralRules           createPluralRulesConstructor                 DontEnum|PropertyCallback
-@@ -253,6 +252,11 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject*)
+@@ -254,6 +253,11 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject*)
      Base::finishCreation(vm);
      ASSERT(inherits(info()));
      JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
@@ -150,18 +150,54 @@ index cba15c79bc45..9553eb6b263b 100644
 +    UNUSED_PARAM(&createDisplayNamesConstructor);
 +#endif
  #if HAVE(ICU_U_LIST_FORMATTER)
-     if (Options::useIntlDurationFormat())
-         putDirectWithoutTransition(vm, vm.propertyNames->DurationFormat, createDurationFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
+     putDirectWithoutTransition(vm, vm.propertyNames->DurationFormat, createDurationFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
+     putDirectWithoutTransition(vm, vm.propertyNames->ListFormat, createListFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 526fe7cfe0cf..7b057f87b67e 100644
+index 523177737358..3606076882f3 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -18,7 +18,7 @@ find_package(Fontconfig 2.13.0 REQUIRED)
- find_package(Freetype 2.9.0 REQUIRED)
- find_package(LibGcrypt 1.6.0 REQUIRED)
+@@ -11,7 +11,7 @@ find_package(Cairo 1.16.0 REQUIRED)
+ find_package(LibGcrypt 1.7.0 REQUIRED)
+ find_package(Libtasn1 REQUIRED)
  find_package(HarfBuzz 1.4.2 REQUIRED COMPONENTS ICU)
 -find_package(ICU 61.2 REQUIRED COMPONENTS data i18n uc)
 +find_package(ICU 60 REQUIRED COMPONENTS data i18n uc)
  find_package(JPEG REQUIRED)
- find_package(LibEpoxy 1.4.0 REQUIRED)
+ find_package(Epoxy 1.5.4 REQUIRED)
  find_package(LibXml2 2.8.0 REQUIRED)
+diff --git a/Source/WTF/wtf/unicode/UTF8Conversion.cpp b/Source/WTF/wtf/unicode/UTF8Conversion.cpp
+index f903eb1038c2..1014974bd8ae 100644
+--- a/Source/WTF/wtf/unicode/UTF8Conversion.cpp
++++ b/Source/WTF/wtf/unicode/UTF8Conversion.cpp
+@@ -49,14 +49,18 @@ template<> char32_t next<Replacement::None, LChar>(std::span<const LChar> charac
+ template<> char32_t next<Replacement::None, char8_t>(std::span<const char8_t> characters, size_t& offset)
+ {
+     char32_t character;
+-    U8_NEXT(characters, offset, characters.size(), character);
++    int32_t narrowedOffset = offset;
++    U8_NEXT(characters.data(), narrowedOffset, static_cast<int32_t>(characters.size()), character);
++    offset = narrowedOffset;
+     return U_IS_SURROGATE(character) ? sentinelCodePoint : character;
+ }
+ 
+ template<> char32_t next<Replacement::ReplaceInvalidSequences, char8_t>(std::span<const char8_t> characters, size_t& offset)
+ {
+     char32_t character;
+-    U8_NEXT_OR_FFFD(characters, offset, characters.size(), character);
++    int32_t narrowedOffset = offset;
++    U8_NEXT_OR_FFFD(characters.data(), narrowedOffset, static_cast<int32_t>(characters.size()), character);
++    offset = narrowedOffset;
+     return character;
+ }
+ 
+@@ -77,7 +81,9 @@ template<> char32_t next<Replacement::ReplaceInvalidSequences, char16_t>(std::sp
+ template<> bool append<Replacement::None, char8_t>(std::span<char8_t> characters, size_t& offset, char32_t character)
+ {
+     UBool sawError = false;
+-    U8_APPEND(characters, offset, characters.size(), character, sawError);
++    int32_t narrowedOffset = offset;
++    U8_APPEND((uint8_t*)characters.data(), narrowedOffset, static_cast<int32_t>(characters.size()), character, sawError);
++    offset = narrowedOffset;
+     return sawError;
+ }
+

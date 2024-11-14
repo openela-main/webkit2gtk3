@@ -1,0 +1,14 @@
+diff --git a/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp b/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
+index a2f3b582dcc5..1faf219c2adb 100644
+--- a/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
++++ b/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
+@@ -91,7 +91,8 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
+         else {
+             static bool once = false;
+             if (!once) {
+-                g_warning("WEBKIT_FORCE_SANDBOX no longer allows disabling the sandbox. Use WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 instead.");
++                if (g_strcmp0(g_get_prgname(), "evolution"))
++                    g_warning("WEBKIT_FORCE_SANDBOX no longer allows disabling the sandbox. Use WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 instead.");
+                 once = true;
+             }
+         }
