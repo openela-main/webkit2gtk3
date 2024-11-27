@@ -10,7 +10,7 @@
 
 Name:           webkit2gtk3
 Version:        2.46.3
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -52,6 +52,8 @@ Patch301:       evolution-sandbox-warning.patch
 
 # https://bugs.webkit.org/show_bug.cgi?id=282645
 Patch400:        websocket-connection-spans.patch
+# https://bugs.webkit.org/show_bug.cgi?id=283095
+Patch401:        CVE-2024-44309.patch
 
 BuildRequires:  bison
 BuildRequires:  cmake
@@ -322,6 +324,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Mon Nov 25 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.3-2
+- Add patch for CVE-2024-44309
+
 * Fri Nov 08 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.3-1
 - Update to 2.46.3
 
