@@ -9,8 +9,8 @@
 # $ rhpkg build --target rhel-8.10.0-z-webkitgtk-stack-gate
 
 Name:           webkit2gtk3
-Version:        2.46.3
-Release:        2%{?dist}
+Version:        2.46.5
+Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -45,15 +45,6 @@ Patch204:       icu60.patch
 
 Patch300:       evolution-shared-secondary-process.patch
 Patch301:       evolution-sandbox-warning.patch
-
-##
-## Patches that need to be upstreamed
-##
-
-# https://bugs.webkit.org/show_bug.cgi?id=282645
-Patch400:        websocket-connection-spans.patch
-# https://bugs.webkit.org/show_bug.cgi?id=283095
-Patch401:        CVE-2024-44309.patch
 
 BuildRequires:  bison
 BuildRequires:  cmake
@@ -324,6 +315,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Wed Dec 18 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.5-1
+- Update to 2.46.5
+
 * Mon Nov 25 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.3-2
 - Add patch for CVE-2024-44309
 
