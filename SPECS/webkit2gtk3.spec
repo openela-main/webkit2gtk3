@@ -9,7 +9,7 @@
 # $ rhpkg build --target rhel-8.10.0-z-webkitgtk-stack-gate
 
 Name:           webkit2gtk3
-Version:        2.46.5
+Version:        2.46.6
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -315,6 +315,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Tue Feb 25 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-1
+- Update to 2.46.6
+
 * Wed Dec 18 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.5-1
 - Update to 2.46.5
 
