@@ -10,7 +10,7 @@
 
 Name:           webkit2gtk3
 Version:        2.46.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -45,6 +45,13 @@ Patch204:       icu60.patch
 
 Patch300:       evolution-shared-secondary-process.patch
 Patch301:       evolution-sandbox-warning.patch
+
+##
+## Upstream patches to remove after next update
+##
+
+# https://bugs.webkit.org/show_bug.cgi?id=285858
+Patch400:          CVE-2025-24201.patch          
 
 BuildRequires:  bison
 BuildRequires:  cmake
@@ -315,6 +322,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Thu Mar 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-2
+- Add patch for CVE-2025-24201
+
 * Tue Feb 25 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-1
 - Update to 2.46.6
 
