@@ -21,7 +21,7 @@
 
 Name:           webkit2gtk3
 Version:        2.46.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -35,6 +35,9 @@ Source2:        webkitgtk-keys.gpg
 
 # Don't print warning about Evolution's use of WEBKIT_FORCE_SANDBOX
 Patch:          evolution-sandbox-warning.patch
+
+# https://bugs.webkit.org/show_bug.cgi?id=285858
+Patch:          CVE-2025-24201.patch
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
@@ -311,6 +314,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Thu Mar 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-2
+- Add patch for CVE-2025-24201
+
 * Tue Feb 25 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-1
 - Update to 2.46.6
 
