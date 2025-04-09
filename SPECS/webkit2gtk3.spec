@@ -20,8 +20,8 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.46.6
-Release:        2%{?dist}
+Version:        2.48.1
+Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -33,11 +33,22 @@ Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # $ gpg --export --export-options export-minimal 013A0127AC9C65B34FFA62526C1009B693975393 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
 
-# Don't print warning about Evolution's use of WEBKIT_FORCE_SANDBOX
+##
+## Patches to support older or missing build dependencies
+##
+Patch:          glib-2-68.patch
+Patch:          icu-67.patch
+
+##
+## Patches to support older Evolution
+##
 Patch:          evolution-sandbox-warning.patch
 
-# https://bugs.webkit.org/show_bug.cgi?id=285858
-Patch:          CVE-2025-24201.patch
+##
+## Upstream patches to remove, hopefully after next update
+##
+
+Patch:          denormal-disabler-build.patch
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
@@ -68,6 +79,7 @@ BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(egl)
 BuildRequires:  pkgconfig(enchant-2)
 BuildRequires:  pkgconfig(epoxy)
+BuildRequires:  pkgconfig(expat)
 BuildRequires:  pkgconfig(fontconfig)
 BuildRequires:  pkgconfig(freetype2)
 BuildRequires:  pkgconfig(gbm)
@@ -234,6 +246,7 @@ rm -rf Source/ThirdParty/qunit/
   -DUSE_SOUP2=ON \
   -DUSE_AVIF=OFF \
   -DENABLE_DOCUMENTATION=OFF \
+  -DENABLE_SPEECH_SYNTHESIS=OFF \
   -DUSE_GSTREAMER_TRANSCODER=OFF \
   -DUSE_JPEGXL=OFF \
   -DUSE_LIBBACKTRACE=OFF \
@@ -314,6 +327,12 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Wed Apr 02 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.1-1
+- Update to 2.48.1
+
+* Mon Mar 31 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.0-1
+- Update to 2.48.0
+
 * Thu Mar 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-2
 - Add patch for CVE-2025-24201
 
