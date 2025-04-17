@@ -3,14 +3,14 @@
 ## directory names (from the source tree) as prefixes for the files.
 %global add_to_license_files() \
         mkdir -p _license_files ; \
-        cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
+        cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')-
 
 # There is a special buildroot required to build this package:
 # $ rhpkg build --target rhel-8.10.0-z-webkitgtk-stack-gate
 
 Name:           webkit2gtk3
-Version:        2.46.6
-Release:        2%{?dist}
+Version:        2.48.1
+Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -47,17 +47,15 @@ Patch300:       evolution-shared-secondary-process.patch
 Patch301:       evolution-sandbox-warning.patch
 
 ##
-## Upstream patches to remove after next update
+## Upstream patches to remove, hopefully after next update
 ##
 
-# https://bugs.webkit.org/show_bug.cgi?id=285858
-Patch400:          CVE-2025-24201.patch          
+Patch:          denormal-disabler-build.patch
 
 BuildRequires:  bison
+BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  flex
-BuildRequires:  gcc-c++
-BuildRequires:  gcc-toolset-14
 BuildRequires:  gettext
 BuildRequires:  git
 BuildRequires:  gnupg2
@@ -223,22 +221,19 @@ rm -rf Source/ThirdParty/qunit/
 %global optflags %(echo %{optflags} | sed 's/-g /-g1 /')
 %endif
 
-# FIXME: Clang is preferred: https://skia.org/docs/user/build/#supported-and-preferred-compilers
-# But we aren't using it in RHEL 9 because it's broken there: https://issues.redhat.com/browse/RHEL-59586
-# In RHEL 8, I haven't yet figured out whether we can use LLVM Toolset to build.
-# So for now we'll use GCC instead.
-%enable_devtoolset14
-
 # -DUSE_SYSTEM_MALLOC=ON is really bad for security, but libpas requires
 # __atomic_compare_exchange_16 which is not available in RHEL 8.
 %cmake \
   -GNinja \
   -DPORT=GTK \
   -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
   -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
   -DENABLE_DOCUMENTATION=OFF \
   -DENABLE_GAMEPAD=OFF \
   -DENABLE_JIT=OFF \
+  -DENABLE_SPEECH_SYNTHESIS=OFF \
   -DENABLE_WEB_CODECS=OFF \
   -DUSE_AVIF=OFF \
   -DUSE_GSTREAMER_TRANSCODER=OFF \
@@ -322,6 +317,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Fri Apr 11 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.1-1
+- Update to 2.48.1
+
 * Thu Mar 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-2
 - Add patch for CVE-2025-24201
 
