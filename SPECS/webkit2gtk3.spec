@@ -342,23 +342,28 @@ export NINJA_STATUS="[%f/%t][%e] "
 * Wed Dec 18 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.5-1
 - Update to 2.46.5
 
-* Mon Nov 25 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.3-2
-- Add patch for CVE-2024-44309
+* Mon Dec 02 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.4-1
+- Update to 2.46.4
 
 * Wed Oct 30 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.3-1
 - Update to 2.46.3
 
 * Mon Oct 21 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.2-1
 - Update to 2.46.2
-- Add patch to disable Evolution sandbox warning
+- Add patch to disable Evolution sandbox warning 
+  Resolves: RHEL-59181
 
 * Thu Oct 10 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.1-2
 - Add patch to keep GSocketMonitor callback alive
-  Resolves: RHEL-59185
+  Resolves: RHEL-59181
 
-* Tue Oct 8 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.1-1
+* Mon Sep 30 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.1-1
 - Update to 2.46.1
-  Resolves: RHEL-59185
+  Resolves: RHEL-59181
+
+* Wed Sep 18 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.0-1
+- Upgrade to 2.46.0
+  Resolves: RHEL-59181
 
 * Thu Aug 15 2024 Michael Catanzaro <mcatanzaro@redhat.com> - 2.44.3-2
 - Add patch to fix WebAssembly
