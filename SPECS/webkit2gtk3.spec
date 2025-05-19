@@ -20,7 +20,7 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.48.1
+Version:        2.48.2
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -48,7 +48,7 @@ Patch:          evolution-sandbox-warning.patch
 ## Upstream patches to remove, hopefully after next update
 ##
 
-Patch:          denormal-disabler-build.patch
+# No patches currently! :)
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
@@ -241,7 +241,6 @@ rm -rf Source/ThirdParty/qunit/
   -GNinja \
   -DPORT=GTK \
   -DCMAKE_BUILD_TYPE=Release \
-  -DENABLE_JIT=OFF \
   -DUSE_GTK4=OFF \
   -DUSE_SOUP2=ON \
   -DUSE_AVIF=OFF \
@@ -327,6 +326,10 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Wed May 14 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.2-1
+- Update to 2.48.2
+- Reenable JIT
+
 * Wed Apr 02 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.1-1
 - Update to 2.48.1
 
