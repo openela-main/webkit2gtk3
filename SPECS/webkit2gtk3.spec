@@ -9,7 +9,7 @@
 # $ rhpkg build --target rhel-8.10.0-z-webkitgtk-stack-gate
 
 Name:           webkit2gtk3
-Version:        2.48.1
+Version:        2.48.2
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -27,7 +27,6 @@ Source2:        webkitgtk-keys.gpg
 ##
 
 Patch100:       compiler-flags.patch
-Patch101:       s390x-build.patch
 
 ##
 ## Patches to support older or missing build dependencies
@@ -50,7 +49,7 @@ Patch301:       evolution-sandbox-warning.patch
 ## Upstream patches to remove, hopefully after next update
 ##
 
-Patch:          denormal-disabler-build.patch
+# No patches currently! :)
 
 BuildRequires:  bison
 BuildRequires:  clang
@@ -232,7 +231,6 @@ rm -rf Source/ThirdParty/qunit/
   -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
   -DENABLE_DOCUMENTATION=OFF \
   -DENABLE_GAMEPAD=OFF \
-  -DENABLE_JIT=OFF \
   -DENABLE_SPEECH_SYNTHESIS=OFF \
   -DENABLE_WEB_CODECS=OFF \
   -DUSE_AVIF=OFF \
@@ -317,6 +315,10 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Thu May 15 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.2-1
+- Update to 2.48.2
+- Reenable JavaScriptCore JIT
+
 * Fri Apr 11 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.1-1
 - Update to 2.48.1
 

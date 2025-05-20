@@ -1,4 +1,4 @@
-From 08a5ccf6fc4a998ca1fb5aa13c314640dd95b874 Mon Sep 17 00:00:00 2001
+From 32e70166ad9e80a3a190c3a475736835a63f58d1 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 4 Apr 2025 14:00:12 -0500
 Subject: [PATCH] Build against GStreamer 1.16
@@ -9,11 +9,11 @@ Subject: [PATCH] Build against GStreamer 1.16
  .../gstreamer/GStreamerAudioMixer.cpp         |  2 +-
  .../graphics/gstreamer/GStreamerCommon.cpp    | 77 +++++++++++++------
  .../graphics/gstreamer/GStreamerCommon.h      | 16 ++++
- .../gstreamer/MediaPlayerPrivateGStreamer.cpp | 22 +-----
+ .../gstreamer/MediaPlayerPrivateGStreamer.cpp | 23 +-----
  .../gstreamer/GStreamerCodecUtilities.cpp     | 39 ++++++----
  .../VideoEncoderPrivateGStreamer.cpp          | 16 ----
  Source/cmake/GStreamerChecks.cmake            |  4 +-
- 9 files changed, 114 insertions(+), 100 deletions(-)
+ 9 files changed, 114 insertions(+), 101 deletions(-)
 
 diff --git a/Source/WebCore/platform/audio/gstreamer/AudioSourceProviderGStreamer.cpp b/Source/WebCore/platform/audio/gstreamer/AudioSourceProviderGStreamer.cpp
 index 0abdeb14826e..65763f3cfde3 100644
@@ -106,7 +106,7 @@ index 8b30e0f14b6a..2d587f68a3b2 100644
  
  GStreamerAudioMixer& GStreamerAudioMixer::singleton()
 diff --git a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
-index 25c8abd3ec90..5ca712566cbd 100644
+index 7adf0dabc73e..49043537e7f7 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
 @@ -132,6 +132,24 @@ GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate* staticPadTempl
@@ -166,7 +166,7 @@ index 25c8abd3ec90..5ca712566cbd 100644
  }
  
  unsigned getGstPlayFlag(const char* nick)
-@@ -1358,6 +1351,36 @@ String gstStructureToJSONString(const GstStructure* structure)
+@@ -1361,6 +1354,36 @@ String gstStructureToJSONString(const GstStructure* structure)
      return value->toJSONString();
  }
  
@@ -203,7 +203,7 @@ index 25c8abd3ec90..5ca712566cbd 100644
  GstClockTime webkitGstInitTime()
  {
      return s_webkitGstInitTime;
-@@ -1415,6 +1438,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
+@@ -1418,6 +1441,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
      case GST_VIDEO_TRANSFER_BT709:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt709;
          break;
@@ -211,7 +211,7 @@ index 25c8abd3ec90..5ca712566cbd 100644
      case GST_VIDEO_TRANSFER_BT601:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Smpte170m;
          break;
-@@ -1427,6 +1451,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
+@@ -1430,6 +1454,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
      case GST_VIDEO_TRANSFER_BT2020_10:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt2020_10bit;
          break;
@@ -219,7 +219,7 @@ index 25c8abd3ec90..5ca712566cbd 100644
      case GST_VIDEO_TRANSFER_BT2020_12:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt2020_12bit;
          break;
-@@ -1545,6 +1570,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
+@@ -1548,6 +1573,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
          case PlatformVideoTransferCharacteristics::Bt709:
              GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT709;
              break;
@@ -227,7 +227,7 @@ index 25c8abd3ec90..5ca712566cbd 100644
          case PlatformVideoTransferCharacteristics::Smpte170m:
              GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT601;
              break;
-@@ -1557,6 +1583,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
+@@ -1560,6 +1586,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
          case PlatformVideoTransferCharacteristics::Bt2020_10bit:
              GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT2020_10;
              break;
@@ -270,18 +270,19 @@ index f332ddd0e040..217132050db0 100644
  
  PlatformVideoColorSpace videoColorSpaceFromCaps(const GstCaps*);
 diff --git a/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp b/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
-index 80fdb52a342c..30a535eb816b 100644
+index 9d6d57868055..3d1a5f76a4c2 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
-@@ -587,7 +587,6 @@ bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate)
- 
-     auto seekStart = toGstClockTime(startTime);
+@@ -589,8 +589,6 @@ bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate, b
      auto seekStop = toGstClockTime(endTime);
--    GST_DEBUG_OBJECT(pipeline(), "[Seek] Performing actual seek to %" GST_TIMEP_FORMAT " (endTime: %" GST_TIMEP_FORMAT ") at rate %f", &seekStart, &seekStop, rate);
-     return gst_element_seek(m_pipeline.get(), rate, GST_FORMAT_TIME, m_seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop);
- }
+     GstEvent* event = gst_event_new_seek(rate, GST_FORMAT_TIME, m_seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop);
  
-@@ -4153,26 +4152,7 @@ void MediaPlayerPrivateGStreamer::setStreamVolumeElement(GstStreamVolume* volume
+-    GST_DEBUG_OBJECT(pipeline(), "[Seek] Performing actual seek to %" GST_TIMEP_FORMAT " (endTime: %" GST_TIMEP_FORMAT ") at rate %f", &seekStart, &seekStop, rate);
+-
+     if (isAsync) {
+         gst_element_call_async(m_pipeline.get(), reinterpret_cast<GstElementCallAsyncFunc>(+[](GstElement* pipeline, gpointer userData) {
+             GstEvent* event = static_cast<GstEvent*>(userData);
+@@ -4167,26 +4165,7 @@ void MediaPlayerPrivateGStreamer::setStreamVolumeElement(GstStreamVolume* volume
  
  bool MediaPlayerPrivateGStreamer::updateVideoSinkStatistics()
  {
