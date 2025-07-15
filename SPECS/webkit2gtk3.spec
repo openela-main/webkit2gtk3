@@ -5,11 +5,8 @@
         mkdir -p _license_files ; \
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')-
 
-# There is a special buildroot required to build this package:
-# $ rhpkg build --target rhel-8.10.0-z-webkitgtk-stack-gate
-
 Name:           webkit2gtk3
-Version:        2.48.2
+Version:        2.48.3
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -315,6 +312,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Fri May 30 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.3-1
+- Update to 2.48.3
+
 * Thu May 15 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.2-1
 - Update to 2.48.2
 - Reenable JavaScriptCore JIT
