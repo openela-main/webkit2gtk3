@@ -6,7 +6,7 @@
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')-
 
 Name:           webkit2gtk3
-Version:        2.48.3
+Version:        2.48.5
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -312,6 +312,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Fri Aug 08 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.5-1
+- Update to 2.48.5
+
 * Fri May 30 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.3-1
 - Update to 2.48.3
 
