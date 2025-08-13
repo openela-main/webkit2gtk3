@@ -1,6 +1,6 @@
-From 1fbf677e9c702b0c2fc14f9bb0311d9b10825cc6 Mon Sep 17 00:00:00 2001
+From 05efb0544d81e8d4bd1a9ee7d7224b2ec35812ee Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
-Date: Mon, 24 Mar 2025 16:10:25 -0500
+Date: Fri, 8 Aug 2025 10:55:54 -0500
 Subject: [PATCH] Revert "[GLib] Remove all GLIB_CHECK_VERSION conditionals"
 
 This reverts commit 85b637b69f1c3a6242420b198d1c173477ce0f22.
@@ -353,7 +353,7 @@ index 150d74ed0296..f461e3c695fe 100644
      resolverClass->lookup_by_address_async = webkitOverridingResolverLookupByAddressAsync;
      resolverClass->lookup_by_address_finish = webkitOverridingResolverLookupByAddressFinish;
 diff --git a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-index a73466be12f1..9ab0cfb6f440 100644
+index 1bf17f0f9b67..ef9f5c2e45f0 100644
 --- a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 +++ b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 @@ -121,11 +121,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
@@ -386,7 +386,7 @@ index a73466be12f1..9ab0cfb6f440 100644
  
      GType certificateType = g_tls_backend_get_certificate_type(g_tls_backend_get_default());
      GRefPtr<GTlsCertificate> certificate;
-@@ -156,8 +160,10 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
+@@ -157,8 +161,10 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
              certificateType, nullptr, nullptr,
              "certificate", certificateData.get(),
              "issuer", issuer,
@@ -396,12 +396,12 @@ index a73466be12f1..9ab0cfb6f440 100644
 +#endif
              nullptr)));
          issuer = certificate.get();
-     }
+         i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 60b385861a7c..677ab4e49155 100644
+index 9c8241ec34fd..62af15d02e3a 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -7,7 +7,6 @@ SET_PROJECT_VERSION(2 48 0)
+@@ -7,7 +7,6 @@ SET_PROJECT_VERSION(2 48 5)
  
  set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
  
@@ -436,5 +436,5 @@ index 60b385861a7c..677ab4e49155 100644
      find_package(Manette 0.2.4)
      if (NOT Manette_FOUND)
 -- 
-2.49.0
+2.50.1
 
