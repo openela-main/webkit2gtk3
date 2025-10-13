@@ -3,10 +3,10 @@
 ## directory names (from the source tree) as prefixes for the files.
 %global add_to_license_files() \
         mkdir -p _license_files ; \
-        cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')-
+        cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
 Name:           webkit2gtk3
-Version:        2.48.5
+Version:        2.50.0
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -26,27 +26,31 @@ Source2:        webkitgtk-keys.gpg
 Patch100:       compiler-flags.patch
 
 ##
-## Patches to support older or missing build dependencies
-##
-
-Patch200:       cairo-1.15.patch
-Patch201:       glib-2.56.patch
-Patch202:       gstreamer-1.16.patch
-Patch203:       harfbuzz-1.7.5.patch
-Patch204:       icu60.patch
-
-##
 ## Patches to support older Evolution
 ##
 
-Patch300:       evolution-shared-secondary-process.patch
-Patch301:       evolution-sandbox-warning.patch
+Patch200:       evolution-shared-secondary-process.patch
+Patch201:       evolution-sandbox-warning.patch
+
+##
+## Patches to support older or missing build dependencies
+##
+
+Patch300:       cairo-1.15.patch
+Patch301:       glib-2.56.patch
+Patch302:       gstreamer-1.16.patch
+Patch303:       harfbuzz-1.7.5.patch
+Patch304:       icu60.patch
 
 ##
 ## Upstream patches to remove, hopefully after next update
 ##
 
-# No patches currently! :)
+# https://bugs.webkit.org/show_bug.cgi?id=299018
+Patch400:       i686-build.patch
+
+# https://bugs.webkit.org/show_bug.cgi?id=298308
+Patch401:       s390x-build.patch
 
 BuildRequires:  bison
 BuildRequires:  clang
@@ -228,6 +232,7 @@ rm -rf Source/ThirdParty/qunit/
   -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
   -DENABLE_DOCUMENTATION=OFF \
   -DENABLE_GAMEPAD=OFF \
+  -DENABLE_MEDIA_RECORDER=OFF \
   -DENABLE_SPEECH_SYNTHESIS=OFF \
   -DENABLE_WEB_CODECS=OFF \
   -DUSE_AVIF=OFF \
@@ -312,6 +317,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Tue Oct 07 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.0-1
+- Update to 2.50.0
+
 * Fri Aug 08 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.5-1
 - Update to 2.48.5
 

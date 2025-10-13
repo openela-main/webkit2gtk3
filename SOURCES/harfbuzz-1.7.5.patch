@@ -1,5 +1,37 @@
+From 4d81f51a0d3ddd85ec8eac48b3093d9818c97907 Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@redhat.com>
+Date: Tue, 23 Sep 2025 15:48:27 -0500
+Subject: [PATCH] Build against harfbuzz 1.7.5
+
+---
+ .../skia/modules/skshaper/src/SkShaper_harfbuzz.cpp   | 11 ++++-------
+ .../platform/graphics/skia/SkiaHarfBuzzFont.cpp       |  8 +++++---
+ 2 files changed, 9 insertions(+), 10 deletions(-)
+
+diff --git a/Source/ThirdParty/skia/modules/skshaper/src/SkShaper_harfbuzz.cpp b/Source/ThirdParty/skia/modules/skshaper/src/SkShaper_harfbuzz.cpp
+index c40b01d85ab4..79c883dd1380 100644
+--- a/Source/ThirdParty/skia/modules/skshaper/src/SkShaper_harfbuzz.cpp
++++ b/Source/ThirdParty/skia/modules/skshaper/src/SkShaper_harfbuzz.cpp
+@@ -275,13 +275,10 @@ HBFace create_hb_face(const SkTypeface& typeface) {
+         // hb_face_create always succeeds. Check that the format is minimally recognized first.
+         // hb_face_create_for_tables may still create a working hb_face.
+         // See https://github.com/harfbuzz/harfbuzz/issues/248 .
+-        unsigned int num_hb_faces = hb_face_count(blob.get());
+-        if (0 < num_hb_faces && (unsigned)index < num_hb_faces) {
+-            face.reset(hb_face_create(blob.get(), (unsigned)index));
+-            // Check the number of glyphs as a basic sanitization step.
+-            if (face && hb_face_get_glyph_count(face.get()) == 0) {
+-                face.reset();
+-            }
++        face.reset(hb_face_create(blob.get(), (unsigned)index));
++        // Check the number of glyphs as a basic sanitization step.
++        if (face && hb_face_get_glyph_count(face.get()) == 0) {
++            face.reset();
+         }
+     }
+     if (!face) {
 diff --git a/Source/WebCore/platform/graphics/skia/SkiaHarfBuzzFont.cpp b/Source/WebCore/platform/graphics/skia/SkiaHarfBuzzFont.cpp
-index 8bc21b21976c..68654f602c92 100644
+index dbbb5cc21cb6..8818343d3b57 100644
 --- a/Source/WebCore/platform/graphics/skia/SkiaHarfBuzzFont.cpp
 +++ b/Source/WebCore/platform/graphics/skia/SkiaHarfBuzzFont.cpp
 @@ -101,9 +101,10 @@ static HbUniquePtr<hb_face_t> createHarfBuzzFace(SkTypeface& typeface)
@@ -24,25 +56,6 @@ index 8bc21b21976c..68654f602c92 100644
  
      if (int axisCount = typeface.getVariationDesignPosition(nullptr, 0)) {
          Vector<SkFontArguments::VariationPosition::Coordinate> axisValues(axisCount);
-diff --git a/Source/ThirdParty/skia/modules/skshaper/src/SkShaper_harfbuzz.cpp b/Source/ThirdParty/skia/modules/skshaper/src/SkShaper_harfbuzz.cpp
-index 065385774422..498994ff7aa7 100644
---- a/Source/ThirdParty/skia/modules/skshaper/src/SkShaper_harfbuzz.cpp
-+++ b/Source/ThirdParty/skia/modules/skshaper/src/SkShaper_harfbuzz.cpp
-@@ -277,13 +277,10 @@ HBFace create_hb_face(const SkTypeface& typeface) {
-         // hb_face_create always succeeds. Check that the format is minimally recognized first.
-         // hb_face_create_for_tables may still create a working hb_face.
-         // See https://github.com/harfbuzz/harfbuzz/issues/248 .
--        unsigned int num_hb_faces = hb_face_count(blob.get());
--        if (0 < num_hb_faces && (unsigned)index < num_hb_faces) {
--            face.reset(hb_face_create(blob.get(), (unsigned)index));
--            // Check the number of glyphs as a basic sanitization step.
--            if (face && hb_face_get_glyph_count(face.get()) == 0) {
--                face.reset();
--            }
-+        face.reset(hb_face_create(blob.get(), (unsigned)index));
-+        // Check the number of glyphs as a basic sanitization step.
-+        if (face && hb_face_get_glyph_count(face.get()) == 0) {
-+            face.reset();
-         }
-     }
-     if (!face) {
+-- 
+2.51.0
+

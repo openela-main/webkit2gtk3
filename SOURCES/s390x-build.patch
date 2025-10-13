@@ -1,0 +1,10 @@
+--- webkitgtk.orig/Source/WebCore/style/StyleBuilderState.cpp
++++ webkitgtk/Source/WebCore/style/StyleBuilderState.cpp
+@@ -58,6 +58,7 @@
+ #include "Settings.h"
+ #include "StyleAppleColorFilterProperty.h"
+ #include "StyleBuilder.h"
++#include "StyleBuilderStateInlines.h"
+ #include "StyleCachedImage.h"
+ #include "StyleCanvasImage.h"
+ #include "StyleColor.h"

@@ -1,8 +1,17 @@
+From 01c16493deb6dab8e04adfcdd244aaad3067d434 Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@redhat.com>
+Date: Tue, 7 Oct 2025 11:19:06 -0500
+Subject: [PATCH] Suppress warning about WEBKIT_FORCE_SANDBOX for Evolution
+
+---
+ Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
 diff --git a/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp b/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
-index a2f3b582dcc5..1faf219c2adb 100644
+index 044ddc0c3e95..a953dda3dcb8 100644
 --- a/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
 +++ b/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
-@@ -91,7 +91,8 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
+@@ -155,7 +155,8 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
          else {
              static bool once = false;
              if (!once) {
@@ -12,3 +21,6 @@ index a2f3b582dcc5..1faf219c2adb 100644
                  once = true;
              }
          }
+-- 
+2.51.0
+

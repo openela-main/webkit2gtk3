@@ -1,3 +1,13 @@
+From f3dd0fe388842a7cb35266b4b0b79cfb4ef930c4 Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@redhat.com>
+Date: Tue, 23 Sep 2025 15:46:28 -0500
+Subject: [PATCH] Suppress some build warnings
+
+---
+ Source/ThirdParty/libsysprof-capture/CMakeLists.txt | 1 +
+ Source/cmake/WebKitCompilerFlags.cmake              | 8 +-------
+ 2 files changed, 2 insertions(+), 7 deletions(-)
+
 diff --git a/Source/ThirdParty/libsysprof-capture/CMakeLists.txt b/Source/ThirdParty/libsysprof-capture/CMakeLists.txt
 index 7ea8f0469ad7..13a9e390643a 100644
 --- a/Source/ThirdParty/libsysprof-capture/CMakeLists.txt
@@ -11,10 +21,22 @@ index 7ea8f0469ad7..13a9e390643a 100644
      -Wno-unused-parameter
  )
 diff --git a/Source/cmake/WebKitCompilerFlags.cmake b/Source/cmake/WebKitCompilerFlags.cmake
-index f5ec0a55919b..cf307eac2775 100644
+index 77a292fb8b15..f6648c39c4e0 100644
 --- a/Source/cmake/WebKitCompilerFlags.cmake
 +++ b/Source/cmake/WebKitCompilerFlags.cmake
-@@ -184,8 +184,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
+@@ -129,11 +129,6 @@ if (DEVELOPER_MODE AND DEVELOPER_MODE_FATAL_WARNINGS)
+     else ()
+         set(FATAL_WARNINGS_FLAG -Werror)
+     endif ()
+-
+-    check_cxx_compiler_flag(${FATAL_WARNINGS_FLAG} CXX_COMPILER_SUPPORTS_WERROR)
+-    if (CXX_COMPILER_SUPPORTS_WERROR)
+-        set(DEVELOPER_MODE_CXX_FLAGS ${FATAL_WARNINGS_FLAG})
+-    endif ()
+ endif ()
+ 
+ if (DEVELOPER_MODE OR ARM)
+@@ -186,8 +181,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
                                           -Wno-misleading-indentation
                                           -Wno-psabi)
  
@@ -24,3 +46,6 @@ index f5ec0a55919b..cf307eac2775 100644
          WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-mismatched-new-delete)
          WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-uninitialized)
      endif ()
+-- 
+2.51.0
+

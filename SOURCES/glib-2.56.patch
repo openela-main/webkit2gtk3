@@ -1,29 +1,49 @@
-From de6f529213b43a938dcaa125475cef0a1c5e786d Mon Sep 17 00:00:00 2001
+From 862976ce1cb811cb96551df1b337b1053755652e Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 4 Apr 2025 13:58:05 -0500
 Subject: [PATCH] Build against GLib 2.56
 
 ---
- Source/WTF/wtf/URL.h                                |  4 ++--
- Source/WTF/wtf/glib/GRefPtr.cpp                     |  2 ++
- Source/WTF/wtf/glib/GRefPtr.h                       |  3 +++
- Source/WTF/wtf/glib/SocketConnection.cpp            | 13 +++++++++++++
- Source/WTF/wtf/glib/URLGLib.cpp                     |  2 ++
- Source/WebCore/platform/LowPowerModeNotifier.h      |  2 ++
- .../platform/glib/LowPowerModeNotifierGLib.cpp      |  8 ++++++++
- .../platform/network/soup/CertificateInfoSoup.cpp   |  8 ++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.cpp      | 12 ++++++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.h        |  2 ++
- .../NetworkProcess/glib/WebKitCachedResolver.cpp    |  6 ++++++
- .../glib/WebKitOverridingResolver.cpp               |  4 ++++
- Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp    |  6 ++++++
- Source/cmake/OptionsGTK.cmake                       | 13 ++++++++++++-
- Tools/MiniBrowser/gtk/BrowserSettingsDialog.c       |  3 ++-
- Tools/MiniBrowser/gtk/main.c                        |  3 ++-
- 16 files changed, 86 insertions(+), 5 deletions(-)
+ Source/WTF/wtf/Platform.h                          |  2 --
+ Source/WTF/wtf/URL.h                               |  4 ++--
+ Source/WTF/wtf/glib/GRefPtr.h                      |  2 ++
+ Source/WTF/wtf/glib/SocketConnection.cpp           | 13 +++++++++++++
+ Source/WTF/wtf/glib/URLGLib.cpp                    |  2 ++
+ Source/WebCore/platform/LowPowerModeNotifier.h     |  2 ++
+ .../platform/glib/LowPowerModeNotifierGLib.cpp     |  8 ++++++++
+ .../platform/network/soup/CertificateInfoSoup.cpp  |  8 ++++++++
+ Source/WebKit/NetworkProcess/glib/DNSCache.cpp     | 12 ++++++++++++
+ Source/WebKit/NetworkProcess/glib/DNSCache.h       |  2 ++
+ .../NetworkProcess/glib/WebKitCachedResolver.cpp   |  6 ++++++
+ .../glib/WebKitOverridingResolver.cpp              |  4 ++++
+ Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp   |  6 ++++++
+ Source/cmake/OptionsGTK.cmake                      | 14 ++++++++++++--
+ Tools/MiniBrowser/gtk/BrowserSettingsDialog.c      |  3 ++-
+ Tools/MiniBrowser/gtk/main.c                       |  3 ++-
+ 16 files changed, 83 insertions(+), 8 deletions(-)
 
+diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
+index cbb81ce6c8dc..46cbad83fe4e 100644
+--- a/Source/WTF/wtf/Platform.h
++++ b/Source/WTF/wtf/Platform.h
+@@ -84,7 +84,6 @@
+ 
+ #if PLATFORM(GTK)
+ #define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_56
+-#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_70
+ #if USE(GTK4)
+ #define GDK_VERSION_MIN_REQUIRED GDK_VERSION_4_0
+ #else
+@@ -94,7 +93,6 @@
+ 
+ #if PLATFORM(WPE)
+ #define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_56
+-#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_70
+ #endif
+ 
+ #if USE(SOUP)
 diff --git a/Source/WTF/wtf/URL.h b/Source/WTF/wtf/URL.h
-index 8a7864508a8e..f065677c68ad 100644
+index daa9f726eb0c..a24c68e1934b 100644
 --- a/Source/WTF/wtf/URL.h
 +++ b/Source/WTF/wtf/URL.h
 @@ -27,7 +27,7 @@
@@ -35,8 +55,8 @@ index 8a7864508a8e..f065677c68ad 100644
  #include <wtf/glib/GRefPtr.h>
  #endif
  
-@@ -237,7 +237,7 @@ public:
-     WTF_EXPORT_PRIVATE operator NSURL *() const;
+@@ -240,7 +240,7 @@ public:
+     WTF_EXPORT_PRIVATE static NSURL *emptyNSURL();
  #endif
  
 -#if USE(GLIB)
@@ -44,44 +64,22 @@ index 8a7864508a8e..f065677c68ad 100644
      WTF_EXPORT_PRIVATE URL(GUri*);
      WTF_EXPORT_PRIVATE GRefPtr<GUri> createGUri() const;
  #endif
-diff --git a/Source/WTF/wtf/glib/GRefPtr.cpp b/Source/WTF/wtf/glib/GRefPtr.cpp
-index 4c15aa9866c0..6faa98b7eab2 100644
---- a/Source/WTF/wtf/glib/GRefPtr.cpp
-+++ b/Source/WTF/wtf/glib/GRefPtr.cpp
-@@ -207,6 +207,7 @@ template <> void derefGPtr(GDBusNodeInfo* ptr)
-         g_dbus_node_info_unref(ptr);
- }
- 
-+#if HAVE(GURI)
- template <> GUri* refGPtr(GUri* ptr)
- {
-     if (ptr)
-@@ -219,6 +220,7 @@ template <> void derefGPtr(GUri* ptr)
-     if (ptr)
-         g_uri_unref(ptr);
- }
-+#endif
- 
- template <>
- GArray* refGPtr(GArray* ptr)
 diff --git a/Source/WTF/wtf/glib/GRefPtr.h b/Source/WTF/wtf/glib/GRefPtr.h
-index 87a9ef9760bf..d6c71c14a981 100644
+index e4cf3bd45104..9729d6709376 100644
 --- a/Source/WTF/wtf/glib/GRefPtr.h
 +++ b/Source/WTF/wtf/glib/GRefPtr.h
-@@ -264,8 +264,11 @@ template <> WTF_EXPORT_PRIVATE GArray* refGPtr(GArray*);
- template <> WTF_EXPORT_PRIVATE void derefGPtr(GArray*);
- template <> WTF_EXPORT_PRIVATE GResource* refGPtr(GResource*);
- template <> WTF_EXPORT_PRIVATE void derefGPtr(GResource*);
-+
+@@ -328,7 +328,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(GMappedFile, g_mapped_file_ref, g_mapped_file_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(GPtrArray, g_ptr_array_ref, g_ptr_array_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(GSource, g_source_ref, g_source_unref)
 +#if HAVE(GURI)
- template <> WTF_EXPORT_PRIVATE GUri* refGPtr(GUri*);
- template <> WTF_EXPORT_PRIVATE void derefGPtr(GUri*);
+ WTF_DEFINE_GREF_TRAITS_INLINE(GUri, g_uri_ref, g_uri_unref)
 +#endif
+ WTF_DEFINE_GREF_TRAITS_INLINE(GVariantBuilder, g_variant_builder_ref, g_variant_builder_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(GVariant, g_variant_ref_sink, g_variant_unref, g_variant_is_floating)
  
- template <typename T> inline T* refGPtr(T* ptr)
- {
 diff --git a/Source/WTF/wtf/glib/SocketConnection.cpp b/Source/WTF/wtf/glib/SocketConnection.cpp
-index d1185aeb2d47..80a622b83eba 100644
+index 9b8d58d1b916..73423a23211a 100644
 --- a/Source/WTF/wtf/glib/SocketConnection.cpp
 +++ b/Source/WTF/wtf/glib/SocketConnection.cpp
 @@ -145,7 +145,20 @@ bool SocketConnection::readMessage()
@@ -221,7 +219,7 @@ index f32ecca7a300..e81a5433709d 100644
  
  } // namespace WebCore
 diff --git a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
-index db92010baabf..b717b734e8e8 100644
+index a560e73f58a3..78007d891af1 100644
 --- a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
 +++ b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
 @@ -50,9 +50,17 @@ DNSCache::DNSCacheMap& DNSCache::mapForType(Type type)
@@ -353,7 +351,7 @@ index 150d74ed0296..f461e3c695fe 100644
      resolverClass->lookup_by_address_async = webkitOverridingResolverLookupByAddressAsync;
      resolverClass->lookup_by_address_finish = webkitOverridingResolverLookupByAddressFinish;
 diff --git a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-index 1bf17f0f9b67..ef9f5c2e45f0 100644
+index a9ee8507c28a..eae6ab798c8f 100644
 --- a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 +++ b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 @@ -121,11 +121,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
@@ -377,10 +375,10 @@ index 1bf17f0f9b67..ef9f5c2e45f0 100644
 +#if GLIB_CHECK_VERSION(2, 69, 0)
      std::optional<GRefPtr<GByteArray>> privateKey;
      decoder >> privateKey;
-     if (UNLIKELY(!privateKey))
+     if (!privateKey) [[unlikely]]
 @@ -147,6 +150,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
      decoder >> privateKeyPKCS11Uri;
-     if (UNLIKELY(!privateKeyPKCS11Uri))
+     if (!privateKeyPKCS11Uri) [[unlikely]]
          return std::nullopt;
 +#endif
  
@@ -398,18 +396,19 @@ index 1bf17f0f9b67..ef9f5c2e45f0 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 8a611c26a0ac..a74c49f46471 100644
+index 77ec61c954c0..285ab3737bfa 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -7,7 +7,6 @@ SET_PROJECT_VERSION(2 48 5)
+@@ -7,8 +7,6 @@ SET_PROJECT_VERSION(2 50 0)
  
  set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
  
+-# Update Source/WTF/wtf/Platform.h to match required GLib versions.
 -find_package(GLIB 2.70.0 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
  find_package(Cairo 1.14.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
  find_package(Libtasn1 REQUIRED)
-@@ -205,6 +204,13 @@ else ()
+@@ -207,6 +205,13 @@ else ()
      SET_AND_EXPOSE_TO_BUILD(ENABLE_2022_GLIB_API OFF)
  endif ()
  
@@ -423,7 +422,7 @@ index 8a611c26a0ac..a74c49f46471 100644
  EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_INFIX)
  EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_VERSION)
  
-@@ -277,6 +283,11 @@ if (ENABLED_COMPILER_SANITIZERS)
+@@ -277,6 +282,11 @@ if (ENABLED_COMPILER_SANITIZERS)
      set(ENABLE_DOCUMENTATION OFF)
  endif ()
  
@@ -454,10 +453,10 @@ index ef000cd2b910..432c97257048 100644
  
  static void featureTreeViewRenderCategoryData(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 diff --git a/Tools/MiniBrowser/gtk/main.c b/Tools/MiniBrowser/gtk/main.c
-index 8433f5360dc4..9e76cb6cde5d 100644
+index d3fbb968ee46..4f49ad82f9fd 100644
 --- a/Tools/MiniBrowser/gtk/main.c
 +++ b/Tools/MiniBrowser/gtk/main.c
-@@ -276,7 +276,7 @@ static gboolean parseFeaturesOptionCallback(const gchar *option, const gchar *va
+@@ -266,7 +266,7 @@ static gboolean parseFeaturesOptionCallback(const gchar *option, const gchar *va
                  "features, prefixes '-' and '!' disable features. Names are case-insensitive. Example:\n"
                  "\n    %s --features='!DirPseudo,+WebAnimationsCustomEffects,webgl'\n\n"
                  "Available features (+/- = enabled/disabled by default):\n\n", g_get_prgname());
@@ -466,7 +465,7 @@ index 8433f5360dc4..9e76cb6cde5d 100644
          for (gsize i = 0; i < webkit_feature_list_get_length(featureList); i++) {
              WebKitFeature *feature = webkit_feature_list_get(featureList, i);
              g_print("  %c %s (%s)",
-@@ -287,6 +287,7 @@ static gboolean parseFeaturesOptionCallback(const gchar *option, const gchar *va
+@@ -277,6 +277,7 @@ static gboolean parseFeaturesOptionCallback(const gchar *option, const gchar *va
                  g_print(": %s", webkit_feature_get_name(feature));
              g_print("\n");
          }
@@ -475,5 +474,5 @@ index 8433f5360dc4..9e76cb6cde5d 100644
      }
  
 -- 
-2.50.1
+2.51.0
 

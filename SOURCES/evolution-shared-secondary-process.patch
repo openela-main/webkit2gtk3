@@ -1,8 +1,17 @@
+From 5fd4924b8d61545a7798be25ac9cb45c007a1795 Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@redhat.com>
+Date: Tue, 7 Oct 2025 11:18:05 -0500
+Subject: [PATCH] Use a single web process for Evolution
+
+---
+ Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
 diff --git a/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp b/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
-index 65cf0eb2b99a..518cc953edca 100644
+index dca689a7ace5..b63d037a00f4 100644
 --- a/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
 +++ b/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
-@@ -450,6 +450,9 @@ static void webkitWebContextConstructed(GObject* object)
+@@ -457,6 +457,9 @@ static void webkitWebContextConstructed(GObject* object)
      }
      configuration.setTimeZoneOverride(String::fromUTF8(priv->timeZoneOverride.span()));
  
@@ -12,3 +21,6 @@ index 65cf0eb2b99a..518cc953edca 100644
  #if !ENABLE(2022_GLIB_API)
      if (!priv->websiteDataManager)
          priv->websiteDataManager = adoptGRef(webkit_website_data_manager_new("local-storage-directory", priv->localStorageDirectory.data(), nullptr));
+-- 
+2.51.0
+
