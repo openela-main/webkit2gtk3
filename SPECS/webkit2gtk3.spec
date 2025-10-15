@@ -6,7 +6,7 @@
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
 Name:           webkit2gtk3
-Version:        2.50.0
+Version:        2.50.1
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -46,11 +46,7 @@ Patch304:       icu60.patch
 ## Upstream patches to remove, hopefully after next update
 ##
 
-# https://bugs.webkit.org/show_bug.cgi?id=299018
-Patch400:       i686-build.patch
-
-# https://bugs.webkit.org/show_bug.cgi?id=298308
-Patch401:       s390x-build.patch
+# No patches currently! :)
 
 BuildRequires:  bison
 BuildRequires:  clang
@@ -317,6 +313,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Mon Oct 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.1-1
+- Update to 2.50.1
+
 * Tue Oct 07 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.0-1
 - Update to 2.50.0
 
