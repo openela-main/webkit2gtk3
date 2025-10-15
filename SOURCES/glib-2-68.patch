@@ -1,29 +1,27 @@
-From 05efb0544d81e8d4bd1a9ee7d7224b2ec35812ee Mon Sep 17 00:00:00 2001
+From d7b007e4c066c098216ebe900902994c99ab9f9a Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 8 Aug 2025 10:55:54 -0500
 Subject: [PATCH] Revert "[GLib] Remove all GLIB_CHECK_VERSION conditionals"
 
 This reverts commit 85b637b69f1c3a6242420b198d1c173477ce0f22.
 ---
- Source/WTF/wtf/URL.h                                |  4 ++--
- Source/WTF/wtf/glib/GRefPtr.cpp                     |  2 ++
- Source/WTF/wtf/glib/GRefPtr.h                       |  3 +++
- Source/WTF/wtf/glib/SocketConnection.cpp            | 13 +++++++++++++
- Source/WTF/wtf/glib/URLGLib.cpp                     |  2 ++
- Source/WebCore/platform/LowPowerModeNotifier.h      |  2 ++
- .../platform/glib/LowPowerModeNotifierGLib.cpp      |  8 ++++++++
- .../platform/network/soup/CertificateInfoSoup.cpp   |  8 ++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.cpp      | 12 ++++++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.h        |  2 ++
- .../NetworkProcess/glib/WebKitCachedResolver.cpp    |  6 ++++++
- .../glib/WebKitOverridingResolver.cpp               |  4 ++++
- Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp    |  6 ++++++
- Source/cmake/OptionsGTK.cmake                       | 13 ++++++++++++-
- Source/cmake/OptionsWPE.cmake                       | 13 ++++++++++++-
- 15 files changed, 94 insertions(+), 4 deletions(-)
+ Source/WTF/wtf/URL.h                               |  4 ++--
+ Source/WTF/wtf/glib/GRefPtr.h                      |  2 ++
+ Source/WTF/wtf/glib/SocketConnection.cpp           | 13 +++++++++++++
+ Source/WTF/wtf/glib/URLGLib.cpp                    |  2 ++
+ Source/WebCore/platform/LowPowerModeNotifier.h     |  2 ++
+ .../platform/glib/LowPowerModeNotifierGLib.cpp     |  8 ++++++++
+ .../platform/network/soup/CertificateInfoSoup.cpp  |  8 ++++++++
+ Source/WebKit/NetworkProcess/glib/DNSCache.cpp     | 12 ++++++++++++
+ Source/WebKit/NetworkProcess/glib/DNSCache.h       |  2 ++
+ .../NetworkProcess/glib/WebKitCachedResolver.cpp   |  6 ++++++
+ .../glib/WebKitOverridingResolver.cpp              |  4 ++++
+ Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp   |  6 ++++++
+ Source/cmake/OptionsGTK.cmake                      | 14 ++++++++++++--
+ 13 files changed, 79 insertions(+), 4 deletions(-)
 
 diff --git a/Source/WTF/wtf/URL.h b/Source/WTF/wtf/URL.h
-index 8a7864508a8e..f065677c68ad 100644
+index daa9f726eb0c..a24c68e1934b 100644
 --- a/Source/WTF/wtf/URL.h
 +++ b/Source/WTF/wtf/URL.h
 @@ -27,7 +27,7 @@
@@ -35,8 +33,8 @@ index 8a7864508a8e..f065677c68ad 100644
  #include <wtf/glib/GRefPtr.h>
  #endif
  
-@@ -237,7 +237,7 @@ public:
-     WTF_EXPORT_PRIVATE operator NSURL *() const;
+@@ -240,7 +240,7 @@ public:
+     WTF_EXPORT_PRIVATE static NSURL *emptyNSURL();
  #endif
  
 -#if USE(GLIB)
@@ -44,44 +42,22 @@ index 8a7864508a8e..f065677c68ad 100644
      WTF_EXPORT_PRIVATE URL(GUri*);
      WTF_EXPORT_PRIVATE GRefPtr<GUri> createGUri() const;
  #endif
-diff --git a/Source/WTF/wtf/glib/GRefPtr.cpp b/Source/WTF/wtf/glib/GRefPtr.cpp
-index 4c15aa9866c0..6faa98b7eab2 100644
---- a/Source/WTF/wtf/glib/GRefPtr.cpp
-+++ b/Source/WTF/wtf/glib/GRefPtr.cpp
-@@ -207,6 +207,7 @@ template <> void derefGPtr(GDBusNodeInfo* ptr)
-         g_dbus_node_info_unref(ptr);
- }
- 
-+#if HAVE(GURI)
- template <> GUri* refGPtr(GUri* ptr)
- {
-     if (ptr)
-@@ -219,6 +220,7 @@ template <> void derefGPtr(GUri* ptr)
-     if (ptr)
-         g_uri_unref(ptr);
- }
-+#endif
- 
- template <>
- GArray* refGPtr(GArray* ptr)
 diff --git a/Source/WTF/wtf/glib/GRefPtr.h b/Source/WTF/wtf/glib/GRefPtr.h
-index 87a9ef9760bf..d6c71c14a981 100644
+index e4cf3bd45104..9729d6709376 100644
 --- a/Source/WTF/wtf/glib/GRefPtr.h
 +++ b/Source/WTF/wtf/glib/GRefPtr.h
-@@ -264,8 +264,11 @@ template <> WTF_EXPORT_PRIVATE GArray* refGPtr(GArray*);
- template <> WTF_EXPORT_PRIVATE void derefGPtr(GArray*);
- template <> WTF_EXPORT_PRIVATE GResource* refGPtr(GResource*);
- template <> WTF_EXPORT_PRIVATE void derefGPtr(GResource*);
-+
+@@ -328,7 +328,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(GMappedFile, g_mapped_file_ref, g_mapped_file_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(GPtrArray, g_ptr_array_ref, g_ptr_array_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(GSource, g_source_ref, g_source_unref)
 +#if HAVE(GURI)
- template <> WTF_EXPORT_PRIVATE GUri* refGPtr(GUri*);
- template <> WTF_EXPORT_PRIVATE void derefGPtr(GUri*);
+ WTF_DEFINE_GREF_TRAITS_INLINE(GUri, g_uri_ref, g_uri_unref)
 +#endif
+ WTF_DEFINE_GREF_TRAITS_INLINE(GVariantBuilder, g_variant_builder_ref, g_variant_builder_unref)
+ WTF_DEFINE_GREF_TRAITS_INLINE(GVariant, g_variant_ref_sink, g_variant_unref, g_variant_is_floating)
  
- template <typename T> inline T* refGPtr(T* ptr)
- {
 diff --git a/Source/WTF/wtf/glib/SocketConnection.cpp b/Source/WTF/wtf/glib/SocketConnection.cpp
-index d1185aeb2d47..80a622b83eba 100644
+index 9b8d58d1b916..73423a23211a 100644
 --- a/Source/WTF/wtf/glib/SocketConnection.cpp
 +++ b/Source/WTF/wtf/glib/SocketConnection.cpp
 @@ -145,7 +145,20 @@ bool SocketConnection::readMessage()
@@ -221,7 +197,7 @@ index f32ecca7a300..e81a5433709d 100644
  
  } // namespace WebCore
 diff --git a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
-index db92010baabf..b717b734e8e8 100644
+index a560e73f58a3..78007d891af1 100644
 --- a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
 +++ b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
 @@ -50,9 +50,17 @@ DNSCache::DNSCacheMap& DNSCache::mapForType(Type type)
@@ -353,7 +329,7 @@ index 150d74ed0296..f461e3c695fe 100644
      resolverClass->lookup_by_address_async = webkitOverridingResolverLookupByAddressAsync;
      resolverClass->lookup_by_address_finish = webkitOverridingResolverLookupByAddressFinish;
 diff --git a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-index 1bf17f0f9b67..ef9f5c2e45f0 100644
+index a9ee8507c28a..eae6ab798c8f 100644
 --- a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 +++ b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 @@ -121,11 +121,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
@@ -377,10 +353,10 @@ index 1bf17f0f9b67..ef9f5c2e45f0 100644
 +#if GLIB_CHECK_VERSION(2, 69, 0)
      std::optional<GRefPtr<GByteArray>> privateKey;
      decoder >> privateKey;
-     if (UNLIKELY(!privateKey))
+     if (!privateKey) [[unlikely]]
 @@ -147,6 +150,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
      decoder >> privateKeyPKCS11Uri;
-     if (UNLIKELY(!privateKeyPKCS11Uri))
+     if (!privateKeyPKCS11Uri) [[unlikely]]
          return std::nullopt;
 +#endif
  
@@ -398,18 +374,19 @@ index 1bf17f0f9b67..ef9f5c2e45f0 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 9c8241ec34fd..62af15d02e3a 100644
+index 5222f5ea81ab..da3d1e19a602 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -7,7 +7,6 @@ SET_PROJECT_VERSION(2 48 5)
+@@ -7,8 +7,6 @@ SET_PROJECT_VERSION(2 50 0)
  
  set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
  
+-# Update Source/WTF/wtf/Platform.h to match required GLib versions.
 -find_package(GLIB 2.70.0 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
  find_package(Cairo 1.16.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
  find_package(Libtasn1 REQUIRED)
-@@ -205,6 +204,13 @@ else ()
+@@ -207,6 +205,13 @@ else ()
      SET_AND_EXPOSE_TO_BUILD(ENABLE_2022_GLIB_API OFF)
  endif ()
  
@@ -423,7 +400,7 @@ index 9c8241ec34fd..62af15d02e3a 100644
  EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_INFIX)
  EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_VERSION)
  
-@@ -277,6 +283,11 @@ if (ENABLED_COMPILER_SANITIZERS)
+@@ -277,6 +282,11 @@ if (ENABLED_COMPILER_SANITIZERS)
      set(ENABLE_DOCUMENTATION OFF)
  endif ()
  
@@ -436,5 +413,5 @@ index 9c8241ec34fd..62af15d02e3a 100644
      find_package(Manette 0.2.4)
      if (NOT Manette_FOUND)
 -- 
-2.50.1
+2.51.0
 

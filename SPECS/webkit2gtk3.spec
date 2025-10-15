@@ -10,9 +10,8 @@
 %global with_gamepad 1
 %endif
 
-# FIXME: Clang is preferred: https://skia.org/docs/user/build/#supported-and-preferred-compilers
-# But Clang toolchain is broken on i686: https://issues.redhat.com/browse/RHEL-59586
-# So, for now we'll use GCC instead.
+# Clang is preferred: https://skia.org/docs/user/build/#supported-and-preferred-compilers
+%global toolchain clang
 
 # We run out of memory if building with LTO enabled on i686.
 %ifarch %{ix86}
@@ -20,8 +19,8 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.48.5
-Release:        1%{?dist}
+Version:        2.50.1
+Release:        0%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -47,14 +46,14 @@ Patch:          evolution-sandbox-warning.patch
 ##
 ## Upstream patches to remove, hopefully after next update
 ##
-
+	
 # No patches currently! :)
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
+BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  flex
-BuildRequires:  gcc-c++
 BuildRequires:  gettext
 BuildRequires:  git
 BuildRequires:  gnupg2
@@ -326,6 +325,12 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Tue Oct 14 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.1-1
+- Update to 2.50.1
+
+* Wed Oct 01 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.0-1
+- Update to 2.50.0
+
 * Fri Aug 08 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.5-1
 - Update to 2.48.5
 
