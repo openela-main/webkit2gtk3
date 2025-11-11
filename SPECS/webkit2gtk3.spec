@@ -20,7 +20,7 @@
 
 Name:           webkit2gtk3
 Version:        2.50.1
-Release:        0%{?dist}
+Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -325,10 +325,10 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
-* Tue Oct 14 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.1-1
+* Mon Oct 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.1-1
 - Update to 2.50.1
 
-* Wed Oct 01 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.0-1
+* Mon Sep 22 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.0-1
 - Update to 2.50.0
 
 * Fri Aug 08 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.5-1
@@ -344,11 +344,8 @@ export NINJA_STATUS="[%f/%t][%e] "
 * Wed Apr 02 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.1-1
 - Update to 2.48.1
 
-* Mon Mar 31 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.0-1
+* Mon Mar 24 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.0-1
 - Update to 2.48.0
-
-* Thu Mar 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-2
-- Add patch for CVE-2025-24201
 
 * Tue Feb 25 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-1
 - Update to 2.46.6
