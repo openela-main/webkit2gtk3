@@ -1,4 +1,4 @@
-From 862976ce1cb811cb96551df1b337b1053755652e Mon Sep 17 00:00:00 2001
+From b668f6fc8731b55105a49e72faf266a90d8e65ac Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 4 Apr 2025 13:58:05 -0500
 Subject: [PATCH] Build against GLib 2.56
@@ -7,7 +7,7 @@ Subject: [PATCH] Build against GLib 2.56
  Source/WTF/wtf/Platform.h                          |  2 --
  Source/WTF/wtf/URL.h                               |  4 ++--
  Source/WTF/wtf/glib/GRefPtr.h                      |  2 ++
- Source/WTF/wtf/glib/SocketConnection.cpp           | 13 +++++++++++++
+ Source/WTF/wtf/glib/SocketConnection.cpp           | 13 ++++++++++++-
  Source/WTF/wtf/glib/URLGLib.cpp                    |  2 ++
  Source/WebCore/platform/LowPowerModeNotifier.h     |  2 ++
  .../platform/glib/LowPowerModeNotifierGLib.cpp     |  8 ++++++++
@@ -20,7 +20,7 @@ Subject: [PATCH] Build against GLib 2.56
  Source/cmake/OptionsGTK.cmake                      | 14 ++++++++++++--
  Tools/MiniBrowser/gtk/BrowserSettingsDialog.c      |  3 ++-
  Tools/MiniBrowser/gtk/main.c                       |  3 ++-
- 16 files changed, 83 insertions(+), 8 deletions(-)
+ 16 files changed, 82 insertions(+), 9 deletions(-)
 
 diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
 index cbb81ce6c8dc..46cbad83fe4e 100644
@@ -79,27 +79,26 @@ index e4cf3bd45104..9729d6709376 100644
  WTF_DEFINE_GREF_TRAITS_INLINE(GVariant, g_variant_ref_sink, g_variant_unref, g_variant_is_floating)
  
 diff --git a/Source/WTF/wtf/glib/SocketConnection.cpp b/Source/WTF/wtf/glib/SocketConnection.cpp
-index 9b8d58d1b916..73423a23211a 100644
+index d28e6dbd67f6..c98362e85f09 100644
 --- a/Source/WTF/wtf/glib/SocketConnection.cpp
 +++ b/Source/WTF/wtf/glib/SocketConnection.cpp
-@@ -145,7 +145,20 @@ bool SocketConnection::readMessage()
+@@ -165,7 +165,18 @@ bool SocketConnection::readMessage()
+         GRefPtr<GVariant> parameters;
          if (!it->value.first.isNull()) {
              GUniquePtr<GVariantType> variantType(g_variant_type_new(it->value.first.data()));
-             size_t parametersSize = bodySize.value() - messageNameLength.value();
+-            parameters = g_variant_new_from_data(variantType.get(), messageData.data(), messageData.size(), FALSE, nullptr, nullptr);
 +            // g_variant_new_from_data() requires the memory to be properly aligned for the type being loaded,
 +            // but it's not possible to know the alignment because g_variant_type_info_query() is not public API.
 +            // Since GLib 2.60 g_variant_new_from_data() already checks the alignment and reallocates the buffer
 +            // in aligned memory only if needed. For older versions we can simply ensure the memory is 8 aligned.
-+#if GLIB_CHECK_VERSION(2, 60, 0)
-             parameters = g_variant_new_from_data(variantType.get(), messageData, parametersSize, FALSE, nullptr, nullptr);
-+#else
-+            auto* alignedMemory = fastAlignedMalloc(8, parametersSize);
-+            memcpy(alignedMemory, messageData, parametersSize);
-+            GRefPtr<GBytes> bytes = g_bytes_new_with_free_func(alignedMemory, parametersSize, [](gpointer data) {
++WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
++            auto* alignedMemory = fastAlignedMalloc(8, messageData.size());
++            memcpy(alignedMemory, messageData.data(), messageData.size());
++WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
++            GRefPtr<GBytes> bytes = g_bytes_new_with_free_func(alignedMemory, messageData.size(), [](gpointer data) {
 +                fastAlignedFree(data);
 +            }, alignedMemory);
 +            parameters = g_variant_new_from_bytes(variantType.get(), bytes.get(), FALSE);
-+#endif
              if (messageIsByteSwapped(flags))
                  parameters = adoptGRef(g_variant_byteswap(parameters.get()));
          }
@@ -396,10 +395,10 @@ index a9ee8507c28a..eae6ab798c8f 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 77ec61c954c0..285ab3737bfa 100644
+index 4522ffdd9f36..0f25e3eae2e1 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -7,8 +7,6 @@ SET_PROJECT_VERSION(2 50 0)
+@@ -7,8 +7,6 @@ SET_PROJECT_VERSION(2 50 3)
  
  set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
  
@@ -474,5 +473,5 @@ index d3fbb968ee46..4f49ad82f9fd 100644
      }
  
 -- 
-2.51.0
+2.52.0
 

@@ -1,4 +1,4 @@
-From 69cd5370bdf7c5d449242de3f53097330113301e Mon Sep 17 00:00:00 2001
+From f083d6f8d80c919d185c1b3f77a2bdd705816a2e Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 4 Apr 2025 14:00:12 -0500
 Subject: [PATCH] Build against GStreamer 1.16
@@ -106,10 +106,10 @@ index c982bcf51e01..01190fe89f9e 100644
  
  GStreamerAudioMixer& GStreamerAudioMixer::singleton()
 diff --git a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
-index 27a1b479e1ad..b996e3a8b163 100644
+index 419190b917b5..c7b0dacfc117 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
-@@ -135,6 +135,25 @@ WARN_UNUSED_RETURN GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTempl
+@@ -136,6 +136,25 @@ WARN_UNUSED_RETURN GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTempl
  }
  
  #if ENABLE(VIDEO)
@@ -135,7 +135,7 @@ index 27a1b479e1ad..b996e3a8b163 100644
  bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, GstVideoFormat& format, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride, double& frameRate, PlatformVideoColorSpace& colorSpace)
  {
      if (!doCapsHaveType(caps, GST_VIDEO_CAPS_TYPE_PREFIX)) {
-@@ -634,31 +653,6 @@ void deinitializeGStreamer()
+@@ -695,31 +714,6 @@ void deinitializeGStreamer()
      teardownVideoEncoderSingleton();
      teardownGStreamerImageDecoders();
  #endif
@@ -167,7 +167,7 @@ index 27a1b479e1ad..b996e3a8b163 100644
  }
  
  unsigned getGstPlayFlag(const char* nick)
-@@ -1434,6 +1428,36 @@ String gstStructureToJSONString(const GstStructure* structure)
+@@ -1495,6 +1489,36 @@ String gstStructureToJSONString(const GstStructure* structure)
      return value->toJSONString();
  }
  
@@ -204,7 +204,7 @@ index 27a1b479e1ad..b996e3a8b163 100644
  GstClockTime webkitGstInitTime()
  {
      return s_webkitGstInitTime;
-@@ -1491,6 +1515,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
+@@ -1552,6 +1576,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
      case GST_VIDEO_TRANSFER_BT709:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt709;
          break;
@@ -212,7 +212,7 @@ index 27a1b479e1ad..b996e3a8b163 100644
      case GST_VIDEO_TRANSFER_BT601:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Smpte170m;
          break;
-@@ -1503,6 +1528,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
+@@ -1564,6 +1589,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
      case GST_VIDEO_TRANSFER_BT2020_10:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt2020_10bit;
          break;
@@ -220,7 +220,7 @@ index 27a1b479e1ad..b996e3a8b163 100644
      case GST_VIDEO_TRANSFER_BT2020_12:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt2020_12bit;
          break;
-@@ -1621,6 +1647,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
+@@ -1682,6 +1708,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
          case PlatformVideoTransferCharacteristics::Bt709:
              GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT709;
              break;
@@ -228,7 +228,7 @@ index 27a1b479e1ad..b996e3a8b163 100644
          case PlatformVideoTransferCharacteristics::Smpte170m:
              GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT601;
              break;
-@@ -1633,6 +1660,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
+@@ -1694,6 +1721,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
          case PlatformVideoTransferCharacteristics::Bt2020_10bit:
              GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT2020_10;
              break;
@@ -237,10 +237,10 @@ index 27a1b479e1ad..b996e3a8b163 100644
              GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT2020_12;
              break;
 diff --git a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.h b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.h
-index 1d176ce8e6ae..81cd5bf8b884 100644
+index 49e031a72585..c7680e1a49c5 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.h
 +++ b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.h
-@@ -70,6 +70,14 @@ inline bool webkitGstCheckVersion(guint major, guint minor, guint micro)
+@@ -74,6 +74,14 @@ inline bool webkitGstCheckVersion(guint major, guint minor, guint micro)
      return true;
  }
  
@@ -255,7 +255,7 @@ index 1d176ce8e6ae..81cd5bf8b884 100644
  #define GST_VIDEO_CAPS_TYPE_PREFIX  "video/"_s
  #define GST_AUDIO_CAPS_TYPE_PREFIX  "audio/"_s
  #define GST_TEXT_CAPS_TYPE_PREFIX   "text/"_s
-@@ -297,6 +305,13 @@ Vector<T> gstStructureGetList(const GstStructure*, ASCIILiteral key);
+@@ -303,6 +311,13 @@ Vector<T> gstStructureGetList(const GstStructure*, ASCIILiteral key);
  
  String gstStructureToJSONString(const GstStructure*);
  
@@ -270,19 +270,19 @@ index 1d176ce8e6ae..81cd5bf8b884 100644
  
  PlatformVideoColorSpace videoColorSpaceFromCaps(const GstCaps*);
 diff --git a/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp b/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
-index 440372617f10..184507cef558 100644
+index f504e21e0e3f..6bc8f319bbcd 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
-@@ -604,8 +604,6 @@ bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate, b
+@@ -624,8 +624,6 @@ bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate, b
      auto seekStop = toGstClockTime(endTime);
-     GstEvent* event = gst_event_new_seek(rate, GST_FORMAT_TIME, m_seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop);
+     auto event = adoptGRef(gst_event_new_seek(rate, GST_FORMAT_TIME, seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop));
  
 -    GST_DEBUG_OBJECT(pipeline(), "[Seek] Performing actual seek to %" GST_TIMEP_FORMAT " (endTime: %" GST_TIMEP_FORMAT ") at rate %f", &seekStart, &seekStop, rate);
 -
      if (isAsync) {
-         gst_element_call_async(m_pipeline.get(), reinterpret_cast<GstElementCallAsyncFunc>(+[](GstElement* pipeline, gpointer userData) {
-             GstEvent* event = static_cast<GstEvent*>(userData);
-@@ -4278,26 +4276,7 @@ void MediaPlayerPrivateGStreamer::setStreamVolumeElement(GstStreamVolume* volume
+         auto data = createAsyncSeekData();
+         data->event = WTFMove(event);
+@@ -4330,26 +4328,7 @@ void MediaPlayerPrivateGStreamer::setStreamVolumeElement(GstStreamVolume* volume
  
  bool MediaPlayerPrivateGStreamer::updateVideoSinkStatistics()
  {
@@ -445,5 +445,5 @@ index af7ad6df1f8f..465e9264cbee 100644
            if (ENABLE_WEB_AUDIO)
                if (NOT PC_GSTREAMER_AUDIO_FOUND OR NOT PC_GSTREAMER_FFT_FOUND)
 -- 
-2.51.0
+2.52.0
 
