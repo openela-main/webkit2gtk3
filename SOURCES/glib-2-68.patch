@@ -3,22 +3,7 @@ From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 8 Aug 2025 10:55:54 -0500
 Subject: [PATCH] Revert "[GLib] Remove all GLIB_CHECK_VERSION conditionals"
 
-This reverts commit 85b637b69f1c3a6242420b198d1c173477ce0f22.
----
- Source/WTF/wtf/URL.h                               |  4 ++--
- Source/WTF/wtf/glib/GRefPtr.h                      |  2 ++
- Source/WTF/wtf/glib/SocketConnection.cpp           | 13 +++++++++++++
- Source/WTF/wtf/glib/URLGLib.cpp                    |  2 ++
- Source/WebCore/platform/LowPowerModeNotifier.h     |  2 ++
- .../platform/glib/LowPowerModeNotifierGLib.cpp     |  8 ++++++++
- .../platform/network/soup/CertificateInfoSoup.cpp  |  8 ++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.cpp     | 12 ++++++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.h       |  2 ++
- .../NetworkProcess/glib/WebKitCachedResolver.cpp   |  6 ++++++
- .../glib/WebKitOverridingResolver.cpp              |  4 ++++
- Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp   |  6 ++++++
- Source/cmake/OptionsGTK.cmake                      | 14 ++++++++++++--
- 13 files changed, 79 insertions(+), 4 deletions(-)
+This partially reverts commit 85b637b69f1c3a6242420b198d1c173477ce0f22.
 
 diff --git a/Source/WTF/wtf/URL.h b/Source/WTF/wtf/URL.h
 index daa9f726eb0c..a24c68e1934b 100644
@@ -56,31 +41,6 @@ index e4cf3bd45104..9729d6709376 100644
  WTF_DEFINE_GREF_TRAITS_INLINE(GVariantBuilder, g_variant_builder_ref, g_variant_builder_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GVariant, g_variant_ref_sink, g_variant_unref, g_variant_is_floating)
  
-diff --git a/Source/WTF/wtf/glib/SocketConnection.cpp b/Source/WTF/wtf/glib/SocketConnection.cpp
-index 9b8d58d1b916..73423a23211a 100644
---- a/Source/WTF/wtf/glib/SocketConnection.cpp
-+++ b/Source/WTF/wtf/glib/SocketConnection.cpp
-@@ -145,7 +145,20 @@ bool SocketConnection::readMessage()
-         if (!it->value.first.isNull()) {
-             GUniquePtr<GVariantType> variantType(g_variant_type_new(it->value.first.data()));
-             size_t parametersSize = bodySize.value() - messageNameLength.value();
-+            // g_variant_new_from_data() requires the memory to be properly aligned for the type being loaded,
-+            // but it's not possible to know the alignment because g_variant_type_info_query() is not public API.
-+            // Since GLib 2.60 g_variant_new_from_data() already checks the alignment and reallocates the buffer
-+            // in aligned memory only if needed. For older versions we can simply ensure the memory is 8 aligned.
-+#if GLIB_CHECK_VERSION(2, 60, 0)
-             parameters = g_variant_new_from_data(variantType.get(), messageData, parametersSize, FALSE, nullptr, nullptr);
-+#else
-+            auto* alignedMemory = fastAlignedMalloc(8, parametersSize);
-+            memcpy(alignedMemory, messageData, parametersSize);
-+            GRefPtr<GBytes> bytes = g_bytes_new_with_free_func(alignedMemory, parametersSize, [](gpointer data) {
-+                fastAlignedFree(data);
-+            }, alignedMemory);
-+            parameters = g_variant_new_from_bytes(variantType.get(), bytes.get(), FALSE);
-+#endif
-             if (messageIsByteSwapped(flags))
-                 parameters = adoptGRef(g_variant_byteswap(parameters.get()));
-         }
 diff --git a/Source/WTF/wtf/glib/URLGLib.cpp b/Source/WTF/wtf/glib/URLGLib.cpp
 index 589dc1b52f8f..f67fe780f333 100644
 --- a/Source/WTF/wtf/glib/URLGLib.cpp
@@ -196,138 +156,6 @@ index f32ecca7a300..e81a5433709d 100644
  }
  
  } // namespace WebCore
-diff --git a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
-index a560e73f58a3..78007d891af1 100644
---- a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
-+++ b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
-@@ -50,9 +50,17 @@ DNSCache::DNSCacheMap& DNSCache::mapForType(Type type)
-     case Type::Default:
-         return m_dnsMap;
-     case Type::IPv4Only:
-+#if GLIB_CHECK_VERSION(2, 59, 0)
-         return m_ipv4Map;
-+#else
-+        return m_dnsMap;
-+#endif
-     case Type::IPv6Only:
-+#if GLIB_CHECK_VERSION(2, 59, 0)
-         return m_ipv6Map;
-+#else
-+        return m_dnsMap;
-+#endif
-     }
- 
-     RELEASE_ASSERT_NOT_REACHED();
-@@ -118,16 +126,20 @@ void DNSCache::removeExpiredResponsesFired()
- {
-     Locker locker { m_lock };
-     removeExpiredResponsesInMap(m_dnsMap);
-+#if GLIB_CHECK_VERSION(2, 59, 0)
-     removeExpiredResponsesInMap(m_ipv4Map);
-     removeExpiredResponsesInMap(m_ipv6Map);
-+#endif
- }
- 
- void DNSCache::clear()
- {
-     Locker locker { m_lock };
-     m_dnsMap.clear();
-+#if GLIB_CHECK_VERSION(2, 59, 0)
-     m_ipv4Map.clear();
-     m_ipv6Map.clear();
-+#endif
- }
- 
- } // namespace WebKit
-diff --git a/Source/WebKit/NetworkProcess/glib/DNSCache.h b/Source/WebKit/NetworkProcess/glib/DNSCache.h
-index 6aa530f44321..49aded549588 100644
---- a/Source/WebKit/NetworkProcess/glib/DNSCache.h
-+++ b/Source/WebKit/NetworkProcess/glib/DNSCache.h
-@@ -65,8 +65,10 @@ private:
- 
-     Lock m_lock;
-     DNSCacheMap m_dnsMap WTF_GUARDED_BY_LOCK(m_lock);
-+#if GLIB_CHECK_VERSION(2, 59, 0)
-     DNSCacheMap m_ipv4Map;
-     DNSCacheMap m_ipv6Map;
-+#endif
-     RunLoop::Timer m_expiredTimer;
- };
- 
-diff --git a/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp b/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
-index 2752ff9cfc2c..7804e8b7a588 100644
---- a/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
-+++ b/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
-@@ -67,7 +67,9 @@ static Vector<GRefPtr<GInetAddress>> addressListGListToVector(GList* addressList
- 
- struct LookupAsyncData {
-     CString hostname;
-+#if GLIB_CHECK_VERSION(2, 59, 0)
-     DNSCache::Type dnsCacheType { DNSCache::Type::Default };
-+#endif
- };
- WEBKIT_DEFINE_ASYNC_DATA_STRUCT(LookupAsyncData)
- 
-@@ -117,6 +119,7 @@ static GList* webkitCachedResolverLookupByNameFinish(GResolver* resolver, GAsync
-     return static_cast<GList*>(g_task_propagate_pointer(G_TASK(result), error));
- }
- 
-+#if GLIB_CHECK_VERSION(2, 59, 0)
- static inline DNSCache::Type dnsCacheType(GResolverNameLookupFlags flags)
- {
-     // A cache is kept for each type of response to avoid the overcomplication of combining or filtering results.
-@@ -177,6 +180,7 @@ static GList* webkitCachedResolverLookupByNameWithFlagsFinish(GResolver* resolve
- 
-     return static_cast<GList*>(g_task_propagate_pointer(G_TASK(result), error));
- }
-+#endif // GLIB_CHECK_VERSION(2, 59, 0)
- 
- static char* webkitCachedResolverLookupByAddress(GResolver* resolver, GInetAddress* address, GCancellable* cancellable, GError** error)
- {
-@@ -219,9 +223,11 @@ static void webkit_cached_resolver_class_init(WebKitCachedResolverClass* klass)
-     resolverClass->lookup_by_name = webkitCachedResolverLookupByName;
-     resolverClass->lookup_by_name_async = webkitCachedResolverLookupByNameAsync;
-     resolverClass->lookup_by_name_finish = webkitCachedResolverLookupByNameFinish;
-+#if GLIB_CHECK_VERSION(2, 59, 0)
-     resolverClass->lookup_by_name_with_flags = webkitCachedResolverLookupByNameWithFlags;
-     resolverClass->lookup_by_name_with_flags_async = webkitCachedResolverLookupByNameWithFlagsAsync;
-     resolverClass->lookup_by_name_with_flags_finish = webkitCachedResolverLookupByNameWithFlagsFinish;
-+#endif
-     resolverClass->lookup_by_address = webkitCachedResolverLookupByAddress;
-     resolverClass->lookup_by_address_async = webkitCachedResolverLookupByAddressAsync;
-     resolverClass->lookup_by_address_finish = webkitCachedResolverLookupByAddressFinish;
-diff --git a/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp b/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
-index 150d74ed0296..f461e3c695fe 100644
---- a/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
-+++ b/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
-@@ -90,6 +90,7 @@ static GList* webkitOverridingResolverLookupByNameFinish(GResolver* resolver, GA
-     return static_cast<GList*>(g_task_propagate_pointer(G_TASK(result), error));
- }
- 
-+#if GLIB_CHECK_VERSION(2, 59, 0)
- static GList* createLoobackAddressList(WebKitOverridingResolver* resolver, GResolverNameLookupFlags flags)
- {
-     GList* list = nullptr;
-@@ -129,6 +130,7 @@ static GList* webkitOverridingResolverLookupByNameWithFlagsFinish(GResolver* res
- 
-     return static_cast<GList*>(g_task_propagate_pointer(G_TASK(result), error));
- }
-+#endif // GLIB_CHECK_VERSION(2, 59, 0)
- 
- static char* webkitOverridingResolverLookupByAddress(GResolver* resolver, GInetAddress* address, GCancellable* cancellable, GError** error)
- {
-@@ -166,9 +168,11 @@ static void webkit_overriding_resolver_class_init(WebKitOverridingResolverClass*
-     resolverClass->lookup_by_name = webkitOverridingResolverLookupByName;
-     resolverClass->lookup_by_name_async = webkitOverridingResolverLookupByNameAsync;
-     resolverClass->lookup_by_name_finish = webkitOverridingResolverLookupByNameFinish;
-+#if GLIB_CHECK_VERSION(2, 59, 0)
-     resolverClass->lookup_by_name_with_flags = webkitOverridingResolverLookupByNameWithFlags;
-     resolverClass->lookup_by_name_with_flags_async = webkitOverridingResolverLookupByNameWithFlagsAsync;
-     resolverClass->lookup_by_name_with_flags_finish = webkitOverridingResolverLookupByNameWithFlagsFinish;
-+#endif
-     resolverClass->lookup_by_address = webkitOverridingResolverLookupByAddress;
-     resolverClass->lookup_by_address_async = webkitOverridingResolverLookupByAddressAsync;
-     resolverClass->lookup_by_address_finish = webkitOverridingResolverLookupByAddressFinish;
 diff --git a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 index a9ee8507c28a..eae6ab798c8f 100644
 --- a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
