@@ -19,7 +19,7 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.50.3
+Version:        2.50.4
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -325,6 +325,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Thu Dec 18 2025 Tomas Popela <tpopela@redhat.com> - 2.50.4-1
+- Update to 2.50.4
+
 * Thu Dec 04 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.3-1
 - Update to 2.50.3
 
