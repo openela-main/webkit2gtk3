@@ -19,8 +19,8 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.50.4
-Release:        1%{?dist}
+Version:        2.52.3
+Release:        0%{?dist}.1
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -36,7 +36,9 @@ Source2:        webkitgtk-keys.gpg
 ## Patches to support older or missing build dependencies
 ##
 Patch:          glib-2-68.patch
+Patch:          libsoup2.patch
 Patch:          icu-67.patch
+Patch:          g-ir-scanner-nonfatal.patch
 
 ##
 ## Patches to support older Evolution
@@ -46,14 +48,16 @@ Patch:          evolution-sandbox-warning.patch
 ##
 ## Upstream patches to remove, hopefully after next update
 ##
-	
-# No patches currently! :)
+
+# https://github.com/WebKit/WebKit/pull/58096
+Patch:          aarch64-build.patch
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
 BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  flex
+BuildRequires:  gcc-toolset-14-libatomic-devel
 BuildRequires:  gettext
 BuildRequires:  git
 BuildRequires:  gnupg2
@@ -325,16 +329,40 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
-* Thu Dec 18 2025 Tomas Popela <tpopela@redhat.com> - 2.50.4-1
+* Mon Apr 20 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.52.3-0.1
+- Update to 2.52.1
+
+* Fri Dec 19 2025 Ravina Jain <rajain@redhat.com> - 2.50.4-1
 - Update to 2.50.4
+- Fix CVE-2025-43529 with Rebase
+- Fix CVE-2025-43531 with Rebase
+- Fix CVE-2025-43501 with Rebase
+- Fix CVE-2025-43536 with Rebase
+- Fix CVE-2025-43535 with Rebase
+- Fix CVE-2025-43541 with Rebase
 
-* Thu Dec 04 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.3-1
+* Fri Dec 05 2025 Kashyap <kekbote@redhat.com> - 2.50.3-1
 - Update to 2.50.3
+- Fix CVE-2025-43443 with Rebase
+- Fix CVE-2025-43440 with Rebase
+- Fix CVE-2025-43434 with Rebase
+- Fix CVE-2025-43432 with Rebase
+- Fix CVE-2025-43431 with Rebase
+- Fix CVE-2025-43430 with Rebase
+- Fix CVE-2025-43429 with Rebase
+- Fix CVE-2025-43427 with Rebase
+- Fix CVE-2025-43425 with Rebase
+- Fix CVE-2025-43421 with Rebase
+- Fix CVE-2025-43392 with Rebase
+- Fix CVE-2025-66287 with Rebase
+- Fix CVE-2025-43458 with Rebase
+- Fix CVE-2025-13947 with Rebase
+- Fix CVE-2025-13502 with Rebase
 
-* Mon Oct 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.1-1
+* Tue Oct 14 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.1-1
 - Update to 2.50.1
 
-* Mon Sep 22 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.0-1
+* Wed Oct 01 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.50.0-1
 - Update to 2.50.0
 
 * Fri Aug 08 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.5-1
@@ -350,8 +378,11 @@ export NINJA_STATUS="[%f/%t][%e] "
 * Wed Apr 02 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.1-1
 - Update to 2.48.1
 
-* Mon Mar 24 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.0-1
+* Mon Mar 31 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.48.0-1
 - Update to 2.48.0
+
+* Thu Mar 13 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-2
+- Add patch for CVE-2025-24201
 
 * Tue Feb 25 2025 Michael Catanzaro <mcatanzaro@redhat.com> - 2.46.6-1
 - Update to 2.46.6

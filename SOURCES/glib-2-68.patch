@@ -1,12 +1,22 @@
-From d7b007e4c066c098216ebe900902994c99ab9f9a Mon Sep 17 00:00:00 2001
+From e9eb6e9b59fbb92ff30ec88b9a3ff2bd7857c23a Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 8 Aug 2025 10:55:54 -0500
 Subject: [PATCH] Revert "[GLib] Remove all GLIB_CHECK_VERSION conditionals"
 
 This partially reverts commit 85b637b69f1c3a6242420b198d1c173477ce0f22.
+---
+ Source/WTF/wtf/URL.h                                      | 4 ++--
+ Source/WTF/wtf/glib/GRefPtr.h                             | 2 ++
+ Source/WTF/wtf/glib/URLGLib.cpp                           | 2 ++
+ Source/WebCore/platform/LowPowerModeNotifier.h            | 2 ++
+ Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp | 8 ++++++++
+ .../WebCore/platform/network/soup/CertificateInfoSoup.cpp | 8 ++++++++
+ Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp          | 6 ++++++
+ Source/cmake/OptionsGTK.cmake                             | 8 ++++++--
+ 8 files changed, 36 insertions(+), 4 deletions(-)
 
 diff --git a/Source/WTF/wtf/URL.h b/Source/WTF/wtf/URL.h
-index daa9f726eb0c..a24c68e1934b 100644
+index 677314b5c781..f739e6df4892 100644
 --- a/Source/WTF/wtf/URL.h
 +++ b/Source/WTF/wtf/URL.h
 @@ -27,7 +27,7 @@
@@ -28,10 +38,10 @@ index daa9f726eb0c..a24c68e1934b 100644
      WTF_EXPORT_PRIVATE GRefPtr<GUri> createGUri() const;
  #endif
 diff --git a/Source/WTF/wtf/glib/GRefPtr.h b/Source/WTF/wtf/glib/GRefPtr.h
-index e4cf3bd45104..9729d6709376 100644
+index 46d25f00cc69..d3a764808a6f 100644
 --- a/Source/WTF/wtf/glib/GRefPtr.h
 +++ b/Source/WTF/wtf/glib/GRefPtr.h
-@@ -328,7 +328,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
+@@ -329,7 +329,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GMappedFile, g_mapped_file_ref, g_mapped_file_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GPtrArray, g_ptr_array_ref, g_ptr_array_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GSource, g_source_ref, g_source_unref)
@@ -77,7 +87,7 @@ index c8f2051d77f6..e2ea0dae3292 100644
  #endif
  };
 diff --git a/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp b/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
-index e083cc66934e..7c0f55d089e6 100644
+index c9bf6a774f49..546a974075c6 100644
 --- a/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
 +++ b/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
 @@ -28,10 +28,13 @@ namespace WebCore {
@@ -85,7 +95,7 @@ index e083cc66934e..7c0f55d089e6 100644
  
  LowPowerModeNotifier::LowPowerModeNotifier(LowPowerModeChangeCallback&& callback)
 +#if GLIB_CHECK_VERSION(2, 69, 1)
-     : m_callback(WTFMove(callback))
+     : m_callback(WTF::move(callback))
      , m_powerProfileMonitor(adoptGRef(g_power_profile_monitor_dup_default()))
      , m_lowPowerModeEnabled(g_power_profile_monitor_get_power_saver_enabled(m_powerProfileMonitor.get()))
 +#endif
@@ -112,7 +122,7 @@ index e083cc66934e..7c0f55d089e6 100644
  
  bool LowPowerModeNotifier::isLowPowerModeEnabled() const
 diff --git a/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp b/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
-index f32ecca7a300..e81a5433709d 100644
+index fb5773d56767..bc10fda05f78 100644
 --- a/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
 @@ -73,9 +73,11 @@ CertificateInfo CertificateInfo::isolatedCopy() const
@@ -157,7 +167,7 @@ index f32ecca7a300..e81a5433709d 100644
  
  } // namespace WebCore
 diff --git a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-index a9ee8507c28a..eae6ab798c8f 100644
+index 6112a107f99a..b569c48de5ba 100644
 --- a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 +++ b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 @@ -121,11 +121,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
@@ -202,33 +212,20 @@ index a9ee8507c28a..eae6ab798c8f 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 5222f5ea81ab..da3d1e19a602 100644
+index a5ebd3e3d879..11227320f60b 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -7,8 +7,6 @@ SET_PROJECT_VERSION(2 50 0)
+@@ -7,8 +7,7 @@ SET_PROJECT_VERSION(2 52 3)
  
  set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
  
 -# Update Source/WTF/wtf/Platform.h to match required GLib versions.
--find_package(GLIB 2.70.0 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
+-find_package(GLib 2.70.0 REQUIRED COMPONENTS GioUnix Thread Module)
++find_package(GLib 2.56.4 REQUIRED COMPONENTS GioUnix Thread Module)
  find_package(Cairo 1.16.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
- find_package(Libtasn1 REQUIRED)
-@@ -207,6 +205,13 @@ else ()
-     SET_AND_EXPOSE_TO_BUILD(ENABLE_2022_GLIB_API OFF)
- endif ()
- 
-+if (ENABLE_2022_GLIB_API)
-+    set(GLIB_MINIMUM_VERSION 2.70.0)
-+else ()
-+    set(GLIB_MINIMUM_VERSION 2.56.4)
-+endif ()
-+find_package(GLIB ${GLIB_MINIMUM_VERSION} REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
-+
- EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_INFIX)
- EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_VERSION)
- 
-@@ -277,6 +282,11 @@ if (ENABLED_COMPILER_SANITIZERS)
+ find_package(Soup3 3.0.0 REQUIRED)
+@@ -258,6 +257,11 @@ if (ENABLED_COMPILER_SANITIZERS)
      set(ENABLE_DOCUMENTATION OFF)
  endif ()
  
@@ -241,5 +238,5 @@ index 5222f5ea81ab..da3d1e19a602 100644
      find_package(Manette 0.2.4)
      if (NOT Manette_FOUND)
 -- 
-2.51.0
+2.53.0
 

@@ -1,8 +1,17 @@
+From 699439119b1bd70de9e4180f2e8e6e32dd794669 Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@gnome.org>
+Date: Mon, 6 Apr 2026 13:32:19 -0500
+Subject: [PATCH] Suppress WEBKIT_FORCE_SANDBOX warning when using Evolution
+
+---
+ Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
 diff --git a/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp b/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
-index a2f3b582dcc5..1faf219c2adb 100644
+index 329dbe6a0281..80b9609a47be 100644
 --- a/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
 +++ b/Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp
-@@ -91,7 +91,8 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
+@@ -154,7 +154,8 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
          else {
              static bool once = false;
              if (!once) {
@@ -12,3 +21,6 @@ index a2f3b582dcc5..1faf219c2adb 100644
                  once = true;
              }
          }
+-- 
+2.53.0
+

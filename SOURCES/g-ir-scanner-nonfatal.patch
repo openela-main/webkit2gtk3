@@ -1,0 +1,28 @@
+From 1d1143a6f00fae1d1812da3dcdd489c71154d529 Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@gnome.org>
+Date: Mon, 6 Apr 2026 18:05:37 -0500
+Subject: [PATCH] Make g-ir-scanner warnings nonfatal
+
+Otherwise, the build fails whenever it sees an unrecognized annotation,
+which is not great whenever WebKit starts using new annotations that do
+not exist in old RHELs.
+---
+ Source/cmake/FindGI.cmake | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Source/cmake/FindGI.cmake b/Source/cmake/FindGI.cmake
+index 8cf372f3b172..cb724a418020 100644
+--- a/Source/cmake/FindGI.cmake
++++ b/Source/cmake/FindGI.cmake
+@@ -342,7 +342,7 @@ function(GI_INTROSPECT namespace nsversion header)
+         VERBATIM
+         COMMAND_EXPAND_LISTS
+         COMMAND ${CMAKE_COMMAND} -E env "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}"
+-            "${GI_SCANNER_EXE}" --quiet --warn-all --warn-error --no-libtool
++            "${GI_SCANNER_EXE}" --quiet --warn-all --no-libtool
+             "--output=${gir_path}"
+             "--library=$<TARGET_FILE_BASE_NAME:${opt_TARGET}>"
+             "--library-path=$<TARGET_FILE_DIR:${opt_TARGET}>"
+-- 
+2.53.0
+
