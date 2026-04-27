@@ -1,49 +1,42 @@
-From b668f6fc8731b55105a49e72faf266a90d8e65ac Mon Sep 17 00:00:00 2001
+From faa96c8ff6fa906beaa5daf8e36bc1f865a9cf66 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 4 Apr 2025 13:58:05 -0500
 Subject: [PATCH] Build against GLib 2.56
 
 ---
- Source/WTF/wtf/Platform.h                          |  2 --
- Source/WTF/wtf/URL.h                               |  4 ++--
- Source/WTF/wtf/glib/GRefPtr.h                      |  2 ++
- Source/WTF/wtf/glib/SocketConnection.cpp           | 13 ++++++++++++-
- Source/WTF/wtf/glib/URLGLib.cpp                    |  2 ++
- Source/WebCore/platform/LowPowerModeNotifier.h     |  2 ++
- .../platform/glib/LowPowerModeNotifierGLib.cpp     |  8 ++++++++
- .../platform/network/soup/CertificateInfoSoup.cpp  |  8 ++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.cpp     | 12 ++++++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.h       |  2 ++
- .../NetworkProcess/glib/WebKitCachedResolver.cpp   |  6 ++++++
- .../glib/WebKitOverridingResolver.cpp              |  4 ++++
- Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp   |  6 ++++++
- Source/cmake/OptionsGTK.cmake                      | 14 ++++++++++++--
- Tools/MiniBrowser/gtk/BrowserSettingsDialog.c      |  3 ++-
- Tools/MiniBrowser/gtk/main.c                       |  3 ++-
- 16 files changed, 82 insertions(+), 9 deletions(-)
+ Source/WTF/wtf/Platform.h                           |  2 +-
+ Source/WTF/wtf/URL.h                                |  4 ++--
+ Source/WTF/wtf/glib/GRefPtr.h                       |  2 ++
+ Source/WTF/wtf/glib/SocketConnection.cpp            | 13 ++++++++++++-
+ Source/WTF/wtf/glib/URLGLib.cpp                     |  2 ++
+ Source/WebCore/platform/LowPowerModeNotifier.h      |  2 ++
+ .../platform/glib/LowPowerModeNotifierGLib.cpp      |  8 ++++++++
+ .../platform/network/soup/CertificateInfoSoup.cpp   |  8 ++++++++
+ Source/WebKit/NetworkProcess/glib/DNSCache.cpp      | 12 ++++++++++++
+ Source/WebKit/NetworkProcess/glib/DNSCache.h        |  2 ++
+ .../NetworkProcess/glib/WebKitCachedResolver.cpp    |  6 ++++++
+ .../glib/WebKitOverridingResolver.cpp               |  4 ++++
+ Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp    |  6 ++++++
+ Source/cmake/OptionsGTK.cmake                       |  7 ++++++-
+ Tools/MiniBrowser/gtk/BrowserSettingsDialog.c       |  3 ++-
+ Tools/MiniBrowser/gtk/main.c                        |  3 ++-
+ 16 files changed, 77 insertions(+), 7 deletions(-)
 
 diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
-index cbb81ce6c8dc..46cbad83fe4e 100644
+index 0c3ba74482f6..57a1b5126290 100644
 --- a/Source/WTF/wtf/Platform.h
 +++ b/Source/WTF/wtf/Platform.h
-@@ -84,7 +84,6 @@
+@@ -92,7 +92,7 @@
  
- #if PLATFORM(GTK)
+ #if USE(GLIB)
  #define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_56
 -#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_70
- #if USE(GTK4)
- #define GDK_VERSION_MIN_REQUIRED GDK_VERSION_4_0
- #else
-@@ -94,7 +93,6 @@
- 
- #if PLATFORM(WPE)
- #define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_56
--#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_70
++#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_56
  #endif
  
- #if USE(SOUP)
+ #if PLATFORM(GTK)
 diff --git a/Source/WTF/wtf/URL.h b/Source/WTF/wtf/URL.h
-index daa9f726eb0c..a24c68e1934b 100644
+index 677314b5c781..f739e6df4892 100644
 --- a/Source/WTF/wtf/URL.h
 +++ b/Source/WTF/wtf/URL.h
 @@ -27,7 +27,7 @@
@@ -65,10 +58,10 @@ index daa9f726eb0c..a24c68e1934b 100644
      WTF_EXPORT_PRIVATE GRefPtr<GUri> createGUri() const;
  #endif
 diff --git a/Source/WTF/wtf/glib/GRefPtr.h b/Source/WTF/wtf/glib/GRefPtr.h
-index e4cf3bd45104..9729d6709376 100644
+index 46d25f00cc69..d3a764808a6f 100644
 --- a/Source/WTF/wtf/glib/GRefPtr.h
 +++ b/Source/WTF/wtf/glib/GRefPtr.h
-@@ -328,7 +328,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
+@@ -329,7 +329,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GMappedFile, g_mapped_file_ref, g_mapped_file_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GPtrArray, g_ptr_array_ref, g_ptr_array_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GSource, g_source_ref, g_source_unref)
@@ -79,10 +72,10 @@ index e4cf3bd45104..9729d6709376 100644
  WTF_DEFINE_GREF_TRAITS_INLINE(GVariant, g_variant_ref_sink, g_variant_unref, g_variant_is_floating)
  
 diff --git a/Source/WTF/wtf/glib/SocketConnection.cpp b/Source/WTF/wtf/glib/SocketConnection.cpp
-index d28e6dbd67f6..c98362e85f09 100644
+index b74955924938..4ea234a93c30 100644
 --- a/Source/WTF/wtf/glib/SocketConnection.cpp
 +++ b/Source/WTF/wtf/glib/SocketConnection.cpp
-@@ -165,7 +165,18 @@ bool SocketConnection::readMessage()
+@@ -166,7 +166,18 @@ bool SocketConnection::readMessage()
          GRefPtr<GVariant> parameters;
          if (!it->value.first.isNull()) {
              GUniquePtr<GVariantType> variantType(g_variant_type_new(it->value.first.data()));
@@ -138,7 +131,7 @@ index c8f2051d77f6..e2ea0dae3292 100644
  #endif
  };
 diff --git a/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp b/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
-index e083cc66934e..7c0f55d089e6 100644
+index c9bf6a774f49..546a974075c6 100644
 --- a/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
 +++ b/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
 @@ -28,10 +28,13 @@ namespace WebCore {
@@ -146,7 +139,7 @@ index e083cc66934e..7c0f55d089e6 100644
  
  LowPowerModeNotifier::LowPowerModeNotifier(LowPowerModeChangeCallback&& callback)
 +#if GLIB_CHECK_VERSION(2, 69, 1)
-     : m_callback(WTFMove(callback))
+     : m_callback(WTF::move(callback))
      , m_powerProfileMonitor(adoptGRef(g_power_profile_monitor_dup_default()))
      , m_lowPowerModeEnabled(g_power_profile_monitor_get_power_saver_enabled(m_powerProfileMonitor.get()))
 +#endif
@@ -173,7 +166,7 @@ index e083cc66934e..7c0f55d089e6 100644
  
  bool LowPowerModeNotifier::isLowPowerModeEnabled() const
 diff --git a/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp b/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
-index f32ecca7a300..e81a5433709d 100644
+index fb5773d56767..bc10fda05f78 100644
 --- a/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
 @@ -73,9 +73,11 @@ CertificateInfo CertificateInfo::isolatedCopy() const
@@ -218,7 +211,7 @@ index f32ecca7a300..e81a5433709d 100644
  
  } // namespace WebCore
 diff --git a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
-index a560e73f58a3..78007d891af1 100644
+index 5ecfdc770d9b..38911a681028 100644
 --- a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
 +++ b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
 @@ -50,9 +50,17 @@ DNSCache::DNSCacheMap& DNSCache::mapForType(Type type)
@@ -261,10 +254,10 @@ index a560e73f58a3..78007d891af1 100644
  
  } // namespace WebKit
 diff --git a/Source/WebKit/NetworkProcess/glib/DNSCache.h b/Source/WebKit/NetworkProcess/glib/DNSCache.h
-index 6aa530f44321..49aded549588 100644
+index 30332200b7ec..f0b6ac73389b 100644
 --- a/Source/WebKit/NetworkProcess/glib/DNSCache.h
 +++ b/Source/WebKit/NetworkProcess/glib/DNSCache.h
-@@ -65,8 +65,10 @@ private:
+@@ -64,8 +64,10 @@ private:
  
      Lock m_lock;
      DNSCacheMap m_dnsMap WTF_GUARDED_BY_LOCK(m_lock);
@@ -276,7 +269,7 @@ index 6aa530f44321..49aded549588 100644
  };
  
 diff --git a/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp b/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
-index 2752ff9cfc2c..7804e8b7a588 100644
+index 27399475ab7a..10f189484a2f 100644
 --- a/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
 +++ b/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
 @@ -67,7 +67,9 @@ static Vector<GRefPtr<GInetAddress>> addressListGListToVector(GList* addressList
@@ -318,7 +311,7 @@ index 2752ff9cfc2c..7804e8b7a588 100644
      resolverClass->lookup_by_address_async = webkitCachedResolverLookupByAddressAsync;
      resolverClass->lookup_by_address_finish = webkitCachedResolverLookupByAddressFinish;
 diff --git a/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp b/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
-index 150d74ed0296..f461e3c695fe 100644
+index c09d90cbd1dc..76a9ae84fb7e 100644
 --- a/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
 +++ b/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
 @@ -90,6 +90,7 @@ static GList* webkitOverridingResolverLookupByNameFinish(GResolver* resolver, GA
@@ -350,7 +343,7 @@ index 150d74ed0296..f461e3c695fe 100644
      resolverClass->lookup_by_address_async = webkitOverridingResolverLookupByAddressAsync;
      resolverClass->lookup_by_address_finish = webkitOverridingResolverLookupByAddressFinish;
 diff --git a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-index a9ee8507c28a..eae6ab798c8f 100644
+index 6112a107f99a..b569c48de5ba 100644
 --- a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 +++ b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 @@ -121,11 +121,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
@@ -395,33 +388,19 @@ index a9ee8507c28a..eae6ab798c8f 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 4522ffdd9f36..0f25e3eae2e1 100644
+index a5ebd3e3d879..ce1791f7a470 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -7,8 +7,6 @@ SET_PROJECT_VERSION(2 50 3)
- 
+@@ -8,7 +8,7 @@ SET_PROJECT_VERSION(2 52 3)
  set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
  
--# Update Source/WTF/wtf/Platform.h to match required GLib versions.
--find_package(GLIB 2.70.0 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
- find_package(Cairo 1.14.0 REQUIRED)
+ # Update Source/WTF/wtf/Platform.h to match required GLib versions.
+-find_package(GLib 2.70.0 REQUIRED COMPONENTS GioUnix Thread Module)
++find_package(GLib 2.56.0 REQUIRED COMPONENTS GioUnix Thread Module)
+ find_package(Cairo 1.16.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
- find_package(Libtasn1 REQUIRED)
-@@ -207,6 +205,13 @@ else ()
-     SET_AND_EXPOSE_TO_BUILD(ENABLE_2022_GLIB_API OFF)
- endif ()
- 
-+if (ENABLE_2022_GLIB_API)
-+    set(GLIB_MINIMUM_VERSION 2.70.0)
-+else ()
-+    set(GLIB_MINIMUM_VERSION 2.56.4)
-+endif ()
-+find_package(GLIB ${GLIB_MINIMUM_VERSION} REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
-+
- EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_INFIX)
- EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_VERSION)
- 
-@@ -277,6 +282,11 @@ if (ENABLED_COMPILER_SANITIZERS)
+ find_package(Soup3 3.0.0 REQUIRED)
+@@ -258,6 +258,11 @@ if (ENABLED_COMPILER_SANITIZERS)
      set(ENABLE_DOCUMENTATION OFF)
  endif ()
  
@@ -473,5 +452,5 @@ index d3fbb968ee46..4f49ad82f9fd 100644
      }
  
 -- 
-2.52.0
+2.53.0
 

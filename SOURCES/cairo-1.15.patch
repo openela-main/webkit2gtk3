@@ -1,4 +1,4 @@
-From 35146c99cad7f842666d9123113936ec89388261 Mon Sep 17 00:00:00 2001
+From a36c4b810651f0c4a66142514da0acc338995431 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Tue, 23 Sep 2025 15:47:39 -0500
 Subject: [PATCH] Build against cairo 1.15
@@ -8,19 +8,19 @@ Subject: [PATCH] Build against cairo 1.15
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 5222f5ea81ab..77ec61c954c0 100644
+index a70213b2edf5..eea6eb87ad4b 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
 @@ -9,7 +9,7 @@ set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
  
  # Update Source/WTF/wtf/Platform.h to match required GLib versions.
- find_package(GLIB 2.70.0 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
+ find_package(GLib 2.56.0 REQUIRED COMPONENTS GioUnix Thread Module)
 -find_package(Cairo 1.16.0 REQUIRED)
 +find_package(Cairo 1.14.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
- find_package(Libtasn1 REQUIRED)
- find_package(HarfBuzz 2.7.4 REQUIRED COMPONENTS ICU)
-@@ -132,7 +132,7 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_THUNDER PRIVATE ${ENABLE_DEVELOPER_MODE}
+ find_package(Soup3 3.0.0 REQUIRED)
+ find_package(Tasn1 REQUIRED)
+@@ -134,7 +134,7 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_THUNDER PRIVATE ${ENABLE_DEVELOPER_MODE}
  WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_PERIODIC_MEMORY_MONITOR PRIVATE ON)
  WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_POINTER_LOCK PRIVATE ON)
  WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_SHAREABLE_RESOURCE PRIVATE ON)
@@ -30,5 +30,5 @@ index 5222f5ea81ab..77ec61c954c0 100644
  WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEB_CODECS PRIVATE ON)
  WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEB_RTC PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
 -- 
-2.51.0
+2.53.0
 

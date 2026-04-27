@@ -6,7 +6,7 @@
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
 Name:           webkit2gtk3
-Version:        2.50.4
+Version:        2.52.3
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -36,22 +36,26 @@ Patch201:       evolution-sandbox-warning.patch
 ## Patches to support older or missing build dependencies
 ##
 
-Patch300:       cairo-1.15.patch
-Patch301:       glib-2.56.patch
+Patch300:       glib-2.56.patch
+Patch301:       cairo-1.15.patch
 Patch302:       gstreamer-1.16.patch
 Patch303:       harfbuzz-1.7.5.patch
-Patch304:       icu60.patch
+Patch304:       libsoup2.patch
+Patch305:       icu60.patch
+Patch306:       g-ir-scanner-nonfatal.patch
 
 ##
 ## Upstream patches to remove, hopefully after next update
 ##
 
-# No patches currently! :)
+# https://github.com/WebKit/WebKit/pull/58096
+Patch400:          aarch64-build.patch
 
 BuildRequires:  bison
 BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  flex
+BuildRequires:  gcc-toolset-14-libatomic-devel
 BuildRequires:  gettext
 BuildRequires:  git
 BuildRequires:  gnupg2
@@ -217,8 +221,6 @@ rm -rf Source/ThirdParty/qunit/
 %global optflags %(echo %{optflags} | sed 's/-g /-g1 /')
 %endif
 
-# -DUSE_SYSTEM_MALLOC=ON is really bad for security, but libpas requires
-# __atomic_compare_exchange_16 which is not available in RHEL 8.
 %cmake \
   -GNinja \
   -DPORT=GTK \
@@ -237,11 +239,13 @@ rm -rf Source/ThirdParty/qunit/
   -DUSE_JPEGXL=OFF \
   -DUSE_LIBBACKTRACE=OFF \
   -DUSE_SOUP2=ON \
-  -DUSE_SYSTEM_MALLOC=ON \
   -DUSE_SYSTEM_SYSPROF_CAPTURE=OFF \
 %if 0%{?rhel}
 %ifarch aarch64
   -DUSE_64KB_PAGE_BLOCK=ON \
+%endif
+%ifarch aarch64 s390x
+  -DENABLE_SPELLCHECK=OFF \
 %endif
 %endif
   %{nil}
@@ -313,6 +317,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Wed Apr 22 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.52.3-1
+- Update to 2.52.3
+
 * Thu Dec 18 2025 Tomas Popela <tpopela@redhat.com> - 2.50.4-1
 - Update to 2.50.4
 

@@ -1,4 +1,4 @@
-From f3dd0fe388842a7cb35266b4b0b79cfb4ef930c4 Mon Sep 17 00:00:00 2001
+From ee1a6eb354e881e211b7004e465828a669be5156 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Tue, 23 Sep 2025 15:46:28 -0500
 Subject: [PATCH] Suppress some build warnings
@@ -21,10 +21,10 @@ index 7ea8f0469ad7..13a9e390643a 100644
      -Wno-unused-parameter
  )
 diff --git a/Source/cmake/WebKitCompilerFlags.cmake b/Source/cmake/WebKitCompilerFlags.cmake
-index 77a292fb8b15..f6648c39c4e0 100644
+index 7eb24e774b40..fe7eedd20507 100644
 --- a/Source/cmake/WebKitCompilerFlags.cmake
 +++ b/Source/cmake/WebKitCompilerFlags.cmake
-@@ -129,11 +129,6 @@ if (DEVELOPER_MODE AND DEVELOPER_MODE_FATAL_WARNINGS)
+@@ -130,11 +130,6 @@ if (DEVELOPER_MODE AND DEVELOPER_MODE_FATAL_WARNINGS)
      else ()
          set(FATAL_WARNINGS_FLAG -Werror)
      endif ()
@@ -36,9 +36,9 @@ index 77a292fb8b15..f6648c39c4e0 100644
  endif ()
  
  if (DEVELOPER_MODE OR ARM)
-@@ -186,8 +181,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
-                                          -Wno-misleading-indentation
-                                          -Wno-psabi)
+@@ -188,8 +183,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
+                                          -Wno-psabi
+                                          -Wno-nullability-completeness)
  
 -    # GCC < 12.0 gives false warnings for mismatched-new-delete <https://webkit.org/b/241516>
 -    if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0.0"))
@@ -47,5 +47,5 @@ index 77a292fb8b15..f6648c39c4e0 100644
          WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-uninitialized)
      endif ()
 -- 
-2.51.0
+2.53.0
 

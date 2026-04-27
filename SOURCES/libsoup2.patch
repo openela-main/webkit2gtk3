@@ -1,0 +1,3178 @@
+From 6b251bc34ceb8a76c1a3ca5671c5228f1dcf745b Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@gnome.org>
+Date: Mon, 6 Apr 2026 13:29:22 -0500
+Subject: [PATCH 1/2] Revert "[CMake] Use imported targets in the libsoup
+ find-module"
+
+This reverts commit d543d84262845ff88577c8fc6bdc8baf64edec51.
+---
+ Source/WebCore/platform/Soup.cmake      |   8 +-
+ Source/WebDriver/PlatformGTK.cmake      |   9 ++-
+ Source/WebKit/PlatformGTK.cmake         |   1 +
+ Source/cmake/FindLibSoup.cmake          |  67 ++++++++++++++++
+ Source/cmake/FindSoup3.cmake            | 100 ------------------------
+ Tools/MiniBrowser/gtk/CMakeLists.txt    |   7 ++
+ Tools/TestWebKitAPI/PlatformGTK.cmake   |   2 +
+ Tools/TestWebKitAPI/glib/CMakeLists.txt |   4 +-
+ 8 files changed, 95 insertions(+), 103 deletions(-)
+ create mode 100644 Source/cmake/FindLibSoup.cmake
+ delete mode 100644 Source/cmake/FindSoup3.cmake
+
+diff --git a/Source/WebCore/platform/Soup.cmake b/Source/WebCore/platform/Soup.cmake
+index aec21d344da1..1280075b2eac 100644
+--- a/Source/WebCore/platform/Soup.cmake
++++ b/Source/WebCore/platform/Soup.cmake
+@@ -19,4 +19,10 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+     platform/network/soup/URLSoup.h
+ )
+ 
+-list(APPEND WebCore_LIBRARIES Soup3::Soup3)
++list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
++    ${LIBSOUP_INCLUDE_DIRS}
++)
++
++list(APPEND WebCore_LIBRARIES
++    ${LIBSOUP_LIBRARIES}
++)
+diff --git a/Source/WebDriver/PlatformGTK.cmake b/Source/WebDriver/PlatformGTK.cmake
+index fe7f5f864c28..ee960b85aabe 100644
+--- a/Source/WebDriver/PlatformGTK.cmake
++++ b/Source/WebDriver/PlatformGTK.cmake
+@@ -2,6 +2,11 @@ set(WebDriver_OUTPUT_NAME WebKitWebDriver)
+ 
+ add_definitions(-DLIBEXECDIR="${CMAKE_INSTALL_FULL_LIBEXECDIR}")
+ 
++list(APPEND WebDriver_SYSTEM_INCLUDE_DIRECTORIES
++    "${GLIB_INCLUDE_DIRS}"
++    "${LIBSOUP_INCLUDE_DIRS}"
++)
++
+ list(APPEND WebDriver_SOURCES
+     glib/SessionHostGlib.cpp
+     glib/WebDriverServiceGLib.cpp
+@@ -17,4 +22,6 @@ if (ENABLE_WEBDRIVER_BIDI)
+     list(APPEND WebDriver_SOURCES soup/WebSocketServerSoup.cpp)
+ endif ()
+ 
+-list(APPEND WebDriver_LIBRARIES Soup3::Soup3)
++list(APPEND WebDriver_LIBRARIES
++    ${LIBSOUP_LIBRARIES}
++)
+diff --git a/Source/WebKit/PlatformGTK.cmake b/Source/WebKit/PlatformGTK.cmake
+index 1985f6a66df2..9c2217af158e 100644
+--- a/Source/WebKit/PlatformGTK.cmake
++++ b/Source/WebKit/PlatformGTK.cmake
+@@ -341,6 +341,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
+ list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
+     ${GSTREAMER_INCLUDE_DIRS}
+     ${GSTREAMER_PBUTILS_INCLUDE_DIRS}
++    ${LIBSOUP_INCLUDE_DIRS}
+ )
+ 
+ list(APPEND WebKit_INTERFACE_INCLUDE_DIRECTORIES
+diff --git a/Source/cmake/FindLibSoup.cmake b/Source/cmake/FindLibSoup.cmake
+new file mode 100644
+index 000000000000..cfc236b1496a
+--- /dev/null
++++ b/Source/cmake/FindLibSoup.cmake
+@@ -0,0 +1,67 @@
++# - Try to find LibSoup 2.4
++# This module defines the following variables:
++#
++#  LIBSOUP_FOUND - LibSoup 2.4 was found
++#  LIBSOUP_INCLUDE_DIRS - the LibSoup 2.4 include directories
++#  LIBSOUP_LIBRARIES - link these to use LibSoup 2.4
++#
++# Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++# 1.  Redistributions of source code must retain the above copyright
++#     notice, this list of conditions and the following disclaimer.
++# 2.  Redistributions in binary form must reproduce the above copyright
++#     notice, this list of conditions and the following disclaimer in the
++#     documentation and/or other materials provided with the distribution.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND ITS CONTRIBUTORS ``AS
++# IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
++# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR ITS
++# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
++# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
++# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
++# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
++# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
++# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++if (NOT DEFINED LibSoup_FIND_VERSION)
++    message(FATAL_ERROR "No LibSoup version specified")
++endif ()
++
++if (LibSoup_FIND_VERSION VERSION_LESS 2.91)
++    set(LIBSOUP_API_VERSION "2.4")
++else ()
++    set(LIBSOUP_API_VERSION "3.0")
++endif ()
++
++# LibSoup does not provide an easy way to retrieve its version other than its
++# .pc file, so we need to rely on PC_LIBSOUP_VERSION and REQUIRE the .pc file
++# to be found.
++find_package(PkgConfig QUIET)
++pkg_check_modules(PC_LIBSOUP QUIET "libsoup-${LIBSOUP_API_VERSION}")
++
++find_path(LIBSOUP_INCLUDE_DIRS
++    NAMES libsoup/soup.h
++    HINTS ${PC_LIBSOUP_INCLUDEDIR}
++          ${PC_LIBSOUP_INCLUDE_DIRS}
++    PATH_SUFFIXES "libsoup-${LIBSOUP_API_VERSION}"
++)
++
++find_library(LIBSOUP_LIBRARIES
++    NAMES "soup-${LIBSOUP_API_VERSION}"
++    HINTS ${PC_LIBSOUP_LIBDIR}
++          ${PC_LIBSOUP_LIBRARY_DIRS}
++)
++
++include(FindPackageHandleStandardArgs)
++FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibSoup REQUIRED_VARS LIBSOUP_INCLUDE_DIRS LIBSOUP_LIBRARIES
++                                          VERSION_VAR   PC_LIBSOUP_VERSION)
++
++mark_as_advanced(
++    LIBSOUP_INCLUDE_DIRS
++    LIBSOUP_LIBRARIES
++)
+diff --git a/Source/cmake/FindSoup3.cmake b/Source/cmake/FindSoup3.cmake
+deleted file mode 100644
+index 85c5db4b2015..000000000000
+--- a/Source/cmake/FindSoup3.cmake
++++ /dev/null
+@@ -1,100 +0,0 @@
+-# Copyright (C) 2025 Igalia S.L.
+-# Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
+-#
+-# Redistribution and use in source and binary forms, with or without
+-# modification, are permitted provided that the following conditions
+-# are met:
+-# 1.  Redistributions of source code must retain the above copyright
+-#     notice, this list of conditions and the following disclaimer.
+-# 2.  Redistributions in binary form must reproduce the above copyright
+-#     notice, this list of conditions and the following disclaimer in the
+-#     documentation and/or other materials provided with the distribution.
+-#
+-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND ITS CONTRIBUTORS ``AS
+-# IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+-# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR ITS
+-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+-# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+-# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+-# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-
+-#[=======================================================================[.rst:
+-FindSoup3
+----------
+-
+-Find the libsoup 3 headers and libraries.
+-
+-Imported Targets
+-^^^^^^^^^^^^^^^^
+-
+-``Soup3::Soup3``
+-  The libsoup 3 library, if found.
+-
+-Result Variables
+-^^^^^^^^^^^^^^^^
+-
+-This will define the following variables in your project:
+-
+-``Soup3_FOUND``
+-  true if (the requested version of) libsoup 3 is available.
+-``Soup3_VERSION``
+-  Version of libsoup 3.
+-
+-#]=======================================================================]
+-
+-find_package(PkgConfig QUIET)
+-pkg_check_modules(PC_Soup3 QUIET libsoup-3.0)
+-set(Soup3_COMPILE_OPTIONS ${PC_Soup3_CFLAGS_OTHER})
+-set(Soup3_VERSION ${PC_Soup3_VERSION})
+-
+-find_library(Soup3_LIBRARY
+-    NAMES soup-3.0
+-    HINTS ${PC_Soup3_LIBDIR}
+-          ${PC_Soup3_LIBRARY_DIRS}
+-)
+-
+-find_path(Soup3_INCLUDE_DIR
+-    NAMES libsoup/soup.h
+-    HINTS ${PC_Soup3_INCLUDEDIR}
+-          ${PC_Soup3_INCLUDE_DIRS}
+-    PATH_SUFFIXES libsoup-3.0
+-)
+-
+-if (Soup3_INCLUDE_DIR AND NOT Soup3_VERSION AND EXISTS "${Soup3_INCLUDE_DIR}/libsoup/soup-version.h")
+-    file(READ "${Soup3_INCLUDE_DIR}/libsoup/soup-version.h" Soup3_VERSION_CONTENT)
+-
+-    string(REGEX MATCH "#define[\t ]+SOUP_MAJOR_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
+-    set(Soup3_VERSION_MAJOR "${CMAKE_MATCH_1}")
+-
+-    string(REGEX MATCH "#define[\t ]+SOUP_MINOR_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
+-    set(Soup3_VERSION_MINOR "${CMAKE_MATCH_1}")
+-
+-    string(REGEX MATCH "#define[\t ]+SOUP_MICRO_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
+-    set(Soup3_VERSION_MICRO "${CMAKE_MATCH_1}")
+-
+-    set(Soup3_VERSION "${Soup3_VERSION_MAJOR}.${Soup3_VERSION_MINOR}.${Soup3_VERSION_MICRO}")
+-endif ()
+-
+-include(FindPackageHandleStandardArgs)
+-find_package_handle_standard_args(Soup3
+-    REQUIRED_VARS Soup3_LIBRARY Soup3_INCLUDE_DIR
+-    VERSION_VAR Soup3_VERSION
+-)
+-
+-if (Soup3_LIBRARY AND NOT TARGET Soup3::Soup3)
+-    add_library(Soup3::Soup3 UNKNOWN IMPORTED GLOBAL)
+-    set_target_properties(Soup3::Soup3 PROPERTIES
+-        IMPORTED_LOCATION "${Soup3_LIBRARY}"
+-        INTERFACE_COMPILE_OPTIONS "${Soup3_COMPILE_OPTIONS}"
+-        INTERFACE_INCLUDE_DIRECTORIES "${Soup3_INCLUDE_DIR}"
+-    )
+-endif ()
+-
+-mark_as_advanced(
+-    Soup3_INCLUDE_DIR
+-    Soup3_LIBRARY
+-)
+diff --git a/Tools/MiniBrowser/gtk/CMakeLists.txt b/Tools/MiniBrowser/gtk/CMakeLists.txt
+index d3ecfb882422..4acc6c8458d3 100644
+--- a/Tools/MiniBrowser/gtk/CMakeLists.txt
++++ b/Tools/MiniBrowser/gtk/CMakeLists.txt
+@@ -26,8 +26,15 @@ set(MiniBrowser_PRIVATE_INCLUDE_DIRECTORIES
+     ${CMAKE_SOURCE_DIR}/Source
+ )
+ 
++set(MiniBrowser_SYSTEM_INCLUDE_DIRECTORIES
++    ${GLIB_INCLUDE_DIRS}
++    ${LIBSOUP_INCLUDE_DIRS}
++)
++
+ set(MiniBrowser_PRIVATE_LIBRARIES
++    ${GLIB_LIBRARIES}
+     ${JavaScriptCore_LIBRARY_NAME}
++    ${LIBSOUP_LIBRARIES}
+     GTK::GTK
+     WebKit::WebKit
+ )
+diff --git a/Tools/TestWebKitAPI/PlatformGTK.cmake b/Tools/TestWebKitAPI/PlatformGTK.cmake
+index 957aef111692..ba1be041abca 100644
+--- a/Tools/TestWebKitAPI/PlatformGTK.cmake
++++ b/Tools/TestWebKitAPI/PlatformGTK.cmake
+@@ -52,10 +52,12 @@ list(APPEND TestWebCore_SOURCES
+ )
+ 
+ list(APPEND TestWebCore_SYSTEM_INCLUDE_DIRECTORIES
++    ${GLIB_INCLUDE_DIRS}
+     ${GSTREAMER_INCLUDE_DIRS}
+     ${GSTREAMER_AUDIO_INCLUDE_DIRS}
+     ${GSTREAMER_PBUTILS_INCLUDE_DIRS}
+     ${GSTREAMER_VIDEO_INCLUDE_DIRS}
++    ${LIBSOUP_INCLUDE_DIRS}
+ )
+ 
+ list(APPEND TestWebCore_LIBRARIES
+diff --git a/Tools/TestWebKitAPI/glib/CMakeLists.txt b/Tools/TestWebKitAPI/glib/CMakeLists.txt
+index f981707b11dc..6a5b4d3bda61 100644
+--- a/Tools/TestWebKitAPI/glib/CMakeLists.txt
++++ b/Tools/TestWebKitAPI/glib/CMakeLists.txt
+@@ -33,6 +33,7 @@ endif ()
+ set(WebKitGLibAPITests_SYSTEM_INCLUDE_DIRECTORIES
+     ${GSTREAMER_AUDIO_INCLUDE_DIRS}
+     ${GSTREAMER_INCLUDE_DIRS}
++    ${LIBSOUP_INCLUDE_DIRS}
+ )
+ 
+ set(WebKitAPITest_LIBRARIES
+@@ -44,8 +45,8 @@ set(WebKitGLibAPITestsCore_LIBRARIES
+ )
+ 
+ set(WebKitGLibAPITest_LIBRARIES
++    ${LIBSOUP_LIBRARIES}
+     ${WebKitAPITest_LIBRARIES}
+-    Soup3::Soup3
+     WebKitGLibAPITestsCore
+ )
+ 
+@@ -203,6 +204,7 @@ if (PORT STREQUAL "WPE" AND ENABLE_WPE_QT_API)
+         ${CMAKE_BINARY_DIR}
+         ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}
+         ${JavaScriptCoreGLib_FRAMEWORK_HEADERS_DIR}
++        ${LIBSOUP_INCLUDE_DIRS}
+         ${TOOLS_DIR}/TestWebKitAPI
+         ${WEBKIT_DIR}/WPEPlatform
+         ${WPEPlatform_DERIVED_SOURCES_DIR}
+-- 
+2.53.0
+
+
+From 467479cc8d7eb8754e50e89acbc46f34d03f25ec Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@gnome.org>
+Date: Mon, 6 Apr 2026 13:26:24 -0500
+Subject: [PATCH 2/2] Revert "[GTK] Remove support for building against
+ libsoup2"
+
+This reverts commit 6153cafaf3bd0db47a50f088e752e73a39d40921.
+---
+ Source/WTF/wtf/Platform.h                     |   4 +
+ Source/WTF/wtf/PlatformEnableGlib.h           |   4 -
+ Source/WebCore/platform/Soup.cmake            |   1 +
+ .../network/soup/AuthenticationChallenge.h    |   6 +
+ .../soup/AuthenticationChallengeSoup.cpp      |  14 +
+ .../platform/network/soup/CookieSoup.cpp      |  32 ++-
+ .../platform/network/soup/GUniquePtrSoup.h    |   9 +
+ .../soup/NetworkStorageSessionSoup.cpp        |  30 ++
+ .../network/soup/ResourceErrorSoup.cpp        |  17 +-
+ .../platform/network/soup/ResourceRequest.h   |   4 +
+ .../network/soup/ResourceRequestSoup.cpp      |  48 ++++
+ .../network/soup/ResourceResponseSoup.cpp     |   3 +
+ .../network/soup/SoupNetworkSession.cpp       |  29 ++
+ .../platform/network/soup/SoupVersioning.h    | 168 +++++++++++
+ .../WebCore/platform/network/soup/URLSoup.cpp |  32 +++
+ .../WebCore/platform/network/soup/URLSoup.h   |   5 +
+ Source/WebDriver/soup/HTTPServerSoup.cpp      |  20 ++
+ Source/WebDriver/soup/WebSocketServerSoup.cpp |  26 ++
+ .../soup/NetworkDataTaskSoup.cpp              | 260 +++++++++++++++++-
+ .../NetworkProcess/soup/NetworkDataTaskSoup.h |  31 +++
+ .../soup/NetworkSessionSoup.cpp               |  26 ++
+ .../NetworkProcess/soup/WebSocketTaskSoup.cpp |  31 ++-
+ Source/WebKit/PlatformGTK.cmake               |   4 +-
+ .../glib/RemoteInspectorHTTPServer.cpp        |  13 +
+ .../gtk/webkitgtk-web-process-extension.pc.in |   2 +-
+ Source/WebKit/gtk/webkitgtk.pc.in             |   2 +-
+ Source/cmake/OptionsGTK.cmake                 |  35 ++-
+ Source/cmake/WebKitFeatures.cmake             |   1 +
+ .../Tests/WebKitGLib/TestAuthentication.cpp   |  45 +++
+ .../Tests/WebKitGLib/TestBackForwardList.cpp  |   5 +
+ .../Tests/WebKitGLib/TestCookieManager.cpp    |   9 +
+ .../Tests/WebKitGLib/TestDownloads.cpp        |  13 +
+ .../Tests/WebKitGLib/TestLoaderClient.cpp     |   5 +
+ .../TestNetworkProcessMemoryPressure.cpp      |   5 +
+ .../Tests/WebKitGLib/TestResources.cpp        |  21 ++
+ .../Tests/WebKitGLib/TestSSL.cpp              |  17 ++
+ .../WebKitGLib/TestWebKitFaviconDatabase.cpp  |   5 +
+ .../WebKitGLib/TestWebKitPolicyClient.cpp     |   5 +
+ .../Tests/WebKitGLib/TestWebKitSettings.cpp   |   5 +
+ .../TestWebKitUserContentManager.cpp          |   5 +
+ .../Tests/WebKitGLib/TestWebKitWebContext.cpp |  34 +++
+ .../Tests/WebKitGLib/TestWebKitWebView.cpp    |   5 +
+ .../Tests/WebKitGLib/TestWebKitWebXR.cpp      |   4 +
+ .../Tests/WebKitGLib/TestWebsiteData.cpp      |  11 +
+ .../Tests/WebKitGtk/TestContextMenu.cpp       |   9 +
+ .../glib/WebKitGLib/WebKitTestServer.cpp      |   6 +
+ .../glib/WebKitGLib/WebKitTestServer.h        |   4 +
+ 47 files changed, 1053 insertions(+), 17 deletions(-)
+ create mode 100644 Source/WebCore/platform/network/soup/SoupVersioning.h
+
+diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
+index 57a1b5126290..2ac1c519ed9a 100644
+--- a/Source/WTF/wtf/Platform.h
++++ b/Source/WTF/wtf/Platform.h
+@@ -104,8 +104,12 @@
+ #endif
+ 
+ #if USE(SOUP)
++#if USE(SOUP2)
++#define SOUP_VERSION_MIN_REQUIRED SOUP_VERSION_2_54
++#else
+ #define SOUP_VERSION_MIN_REQUIRED SOUP_VERSION_3_0
+ #endif
++#endif
+ 
+ #if PLATFORM(COCOA)
+ /* Cocoa defines a series of platform macros for debugging. */
+diff --git a/Source/WTF/wtf/PlatformEnableGlib.h b/Source/WTF/wtf/PlatformEnableGlib.h
+index a50993596280..0faf3134ae84 100644
+--- a/Source/WTF/wtf/PlatformEnableGlib.h
++++ b/Source/WTF/wtf/PlatformEnableGlib.h
+@@ -55,10 +55,6 @@
+ #define ENABLE_OPENTYPE_VERTICAL 1
+ #endif
+ 
+-#if !defined(ENABLE_SERVER_PRECONNECT)
+-#define ENABLE_SERVER_PRECONNECT 1
+-#endif
+-
+ #if !defined(ENABLE_SCROLLING_THREAD) && USE(COORDINATED_GRAPHICS)
+ #define ENABLE_SCROLLING_THREAD 1
+ #endif
+diff --git a/Source/WebCore/platform/Soup.cmake b/Source/WebCore/platform/Soup.cmake
+index 1280075b2eac..8ea3b022bb3e 100644
+--- a/Source/WebCore/platform/Soup.cmake
++++ b/Source/WebCore/platform/Soup.cmake
+@@ -16,6 +16,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+     platform/network/soup/ResourceResponse.h
+     platform/network/soup/SoupNetworkProxySettings.h
+     platform/network/soup/SoupNetworkSession.h
++    platform/network/soup/SoupVersioning.h
+     platform/network/soup/URLSoup.h
+ )
+ 
+diff --git a/Source/WebCore/platform/network/soup/AuthenticationChallenge.h b/Source/WebCore/platform/network/soup/AuthenticationChallenge.h
+index e6a6b94e5010..c2183b06cd83 100644
+--- a/Source/WebCore/platform/network/soup/AuthenticationChallenge.h
++++ b/Source/WebCore/platform/network/soup/AuthenticationChallenge.h
+@@ -56,6 +56,9 @@ public:
+     AuthenticationChallenge(SoupMessage*, GTlsClientConnection*);
+     AuthenticationChallenge(SoupMessage*, GTlsPassword*);
+     AuthenticationClient* authenticationClient() const { RELEASE_ASSERT_NOT_REACHED(); }
++#if USE(SOUP2)
++    SoupMessage* soupMessage() const { return m_soupMessage.get(); }
++#endif
+     SoupAuth* soupAuth() const { return m_soupAuth.get(); }
+     GTlsPassword* tlsPassword() const { return m_tlsPassword.get(); }
+     void setProposedCredential(const Credential& credential) { m_proposedCredential = credential; }
+@@ -70,6 +73,9 @@ private:
+     friend class AuthenticationChallengeBase;
+     static bool platformCompare(const AuthenticationChallenge&, const AuthenticationChallenge&);
+ 
++#if USE(SOUP2)
++    GRefPtr<SoupMessage> m_soupMessage;
++#endif
+     GRefPtr<SoupAuth> m_soupAuth;
+     GRefPtr<GTlsPassword> m_tlsPassword;
+     uint32_t m_tlsPasswordFlags { 0 };
+diff --git a/Source/WebCore/platform/network/soup/AuthenticationChallengeSoup.cpp b/Source/WebCore/platform/network/soup/AuthenticationChallengeSoup.cpp
+index 7ea935d22bd9..c717860d54f3 100644
+--- a/Source/WebCore/platform/network/soup/AuthenticationChallengeSoup.cpp
++++ b/Source/WebCore/platform/network/soup/AuthenticationChallengeSoup.cpp
+@@ -62,9 +62,16 @@ static ProtectionSpace protectionSpaceFromSoupAuthAndURL(SoupAuth* soupAuth, con
+     else
+         scheme = ProtectionSpace::AuthenticationScheme::Unknown;
+ 
++#if USE(SOUP2)
++    auto host = url.host();
++    auto port = url.port();
++    if (!port)
++        port = defaultPortForProtocol(url.protocol());
++#else
+     URL authURL({ }, makeString("http://"_s, unsafeSpan(soup_auth_get_authority(soupAuth))));
+     auto host = authURL.host();
+     auto port = authURL.port();
++#endif
+ 
+     return ProtectionSpace(host.toString(), static_cast<int>(port.value_or(0)),
+         protectionSpaceServerTypeFromURL(url, soup_auth_is_for_proxy(soupAuth)),
+@@ -77,6 +84,9 @@ AuthenticationChallenge::AuthenticationChallenge(SoupMessage* soupMessage, SoupA
+         , retrying ? 1 : 0 // previousFailureCount
+         , soupMessage // failureResponse
+         , ResourceError::authenticationError(soupMessage))
++#if USE(SOUP2)
++    , m_soupMessage(soupMessage)
++#endif
+     , m_soupAuth(soupAuth)
+ {
+ }
+@@ -130,6 +140,10 @@ bool AuthenticationChallenge::platformCompare(const AuthenticationChallenge& a,
+     if (a.tlsPasswordFlags() != b.tlsPasswordFlags())
+         return false;
+ 
++#if USE(SOUP2)
++    return a.soupMessage() == b.soupMessage();
++#endif
++
+     return true;
+ }
+ 
+diff --git a/Source/WebCore/platform/network/soup/CookieSoup.cpp b/Source/WebCore/platform/network/soup/CookieSoup.cpp
+index ce2a688eb3fc..9bb9c7124d40 100644
+--- a/Source/WebCore/platform/network/soup/CookieSoup.cpp
++++ b/Source/WebCore/platform/network/soup/CookieSoup.cpp
+@@ -32,6 +32,7 @@
+ 
+ namespace WebCore {
+ 
++#if SOUP_CHECK_VERSION(2, 69, 90)
+ static Cookie::SameSitePolicy coreSameSitePolicy(SoupSameSitePolicy policy)
+ {
+     switch (policy) {
+@@ -61,19 +62,40 @@ static SoupSameSitePolicy soupSameSitePolicy(Cookie::SameSitePolicy policy)
+     ASSERT_NOT_REACHED();
+     return SOUP_SAME_SITE_POLICY_NONE;
+ }
++#endif
+ 
+ Cookie::Cookie(SoupCookie* cookie)
+     : name(String::fromUTF8(soup_cookie_get_name(cookie)))
+     , value(String::fromUTF8(soup_cookie_get_value(cookie)))
+     , domain(String::fromUTF8(soup_cookie_get_domain(cookie)))
+     , path(String::fromUTF8(soup_cookie_get_path(cookie)))
++#if USE(SOUP2)
++    , expires(soup_cookie_get_expires(cookie) ? std::make_optional(static_cast<double>(soup_date_to_time_t(soup_cookie_get_expires(cookie))) * 1000) : std::nullopt)
++#else
+     , expires(soup_cookie_get_expires(cookie) ? std::make_optional(static_cast<double>(g_date_time_to_unix(soup_cookie_get_expires(cookie))) * 1000) : std::nullopt)
++#endif
+     , httpOnly(soup_cookie_get_http_only(cookie))
+     , secure(soup_cookie_get_secure(cookie))
+     , session(!soup_cookie_get_expires(cookie))
+-    , sameSite(coreSameSitePolicy(soup_cookie_get_same_site_policy(cookie)))
++
+ {
++#if SOUP_CHECK_VERSION(2, 69, 90)
++    sameSite = coreSameSitePolicy(soup_cookie_get_same_site_policy(cookie));
++#endif
++}
++
++#if USE(SOUP2)
++static SoupDate* msToSoupDate(double ms)
++{
++    int year = msToYear(ms);
++    int dayOfYear = dayInYear(ms, year);
++    bool leapYear = isLeapYear(year);
++
++    // monthFromDayInYear() returns a value in the [0,11] range, while soup_date_new() expects
++    // a value in the [1,12] range, meaning we have to manually adjust the month value.
++    return soup_date_new(year, monthFromDayInYear(dayOfYear, leapYear) + 1, dayInMonthFromDayInYear(dayOfYear, leapYear), msToHours(ms), msToMinutes(ms), static_cast<int64_t>(ms / 1000) % 60);
+ }
++#endif
+ 
+ SoupCookie* Cookie::toSoupCookie() const
+ {
+@@ -85,11 +107,19 @@ SoupCookie* Cookie::toSoupCookie() const
+ 
+     soup_cookie_set_http_only(soupCookie, httpOnly);
+     soup_cookie_set_secure(soupCookie, secure);
++#if SOUP_CHECK_VERSION(2, 69, 90)
+     soup_cookie_set_same_site_policy(soupCookie, soupSameSitePolicy(sameSite));
++#endif
+ 
+     if (!session && expires) {
++#if USE(SOUP2)
++        SoupDate* date = msToSoupDate(*expires);
++        soup_cookie_set_expires(soupCookie, date);
++        soup_date_free(date);
++#else
+         GRefPtr<GDateTime> date = adoptGRef(g_date_time_new_from_unix_utc(*expires / 1000.));
+         soup_cookie_set_expires(soupCookie, date.get());
++#endif
+     }
+ 
+     return soupCookie;
+diff --git a/Source/WebCore/platform/network/soup/GUniquePtrSoup.h b/Source/WebCore/platform/network/soup/GUniquePtrSoup.h
+index 843b56c646bd..6bbe61e05e6a 100644
+--- a/Source/WebCore/platform/network/soup/GUniquePtrSoup.h
++++ b/Source/WebCore/platform/network/soup/GUniquePtrSoup.h
+@@ -29,8 +29,17 @@
+ namespace WTF {
+ 
+ WTF_DEFINE_GPTR_DELETER(SoupCookie, soup_cookie_free)
++#if SOUP_CHECK_VERSION(2, 67, 1)
+ WTF_DEFINE_GPTR_DELETER(SoupHSTSPolicy, soup_hsts_policy_free)
++#endif
++#if USE(SOUP2)
++WTF_DEFINE_GPTR_DELETER(SoupURI, soup_uri_free)
++#endif
++#if SOUP_CHECK_VERSION(2, 99, 3)
+ WTF_DEFINE_GPTR_DELETER(SoupMessageHeaders, soup_message_headers_unref)
++#else
++WTF_DEFINE_GPTR_DELETER(SoupMessageHeaders, soup_message_headers_free)
++#endif
+ 
+ } // namespace WTF
+ 
+diff --git a/Source/WebCore/platform/network/soup/NetworkStorageSessionSoup.cpp b/Source/WebCore/platform/network/soup/NetworkStorageSessionSoup.cpp
+index a2a6da86c7d9..a5cbe1c7d4b4 100644
+--- a/Source/WebCore/platform/network/soup/NetworkStorageSessionSoup.cpp
++++ b/Source/WebCore/platform/network/soup/NetworkStorageSessionSoup.cpp
+@@ -353,8 +353,12 @@ void NetworkStorageSession::setCookieAcceptPolicy(HTTPCookieAcceptPolicy policy)
+         soupPolicy = SOUP_COOKIE_JAR_ACCEPT_NEVER;
+         break;
+     case HTTPCookieAcceptPolicy::OnlyFromMainDocumentDomain:
++#if SOUP_CHECK_VERSION(2, 71, 0)
+         soupPolicy = SOUP_COOKIE_JAR_ACCEPT_GRANDFATHERED_THIRD_PARTY;
+         break;
++#else
++        [[fallthrough]];
++#endif
+     case HTTPCookieAcceptPolicy::ExclusivelyFromMainDocumentDomain:
+         soupPolicy = SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY;
+         break;
+@@ -370,8 +374,10 @@ HTTPCookieAcceptPolicy NetworkStorageSession::cookieAcceptPolicy() const
+         return HTTPCookieAcceptPolicy::AlwaysAccept;
+     case SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY:
+         return HTTPCookieAcceptPolicy::ExclusivelyFromMainDocumentDomain;
++#if SOUP_CHECK_VERSION(2, 71, 0)
+     case SOUP_COOKIE_JAR_ACCEPT_GRANDFATHERED_THIRD_PARTY:
+         return HTTPCookieAcceptPolicy::OnlyFromMainDocumentDomain;
++#endif
+     case SOUP_COOKIE_JAR_ACCEPT_NEVER:
+         return HTTPCookieAcceptPolicy::Never;
+     }
+@@ -443,13 +449,21 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameS
+         // Cap lifetime of persistent, client-side cookies to a week.
+         if (cappedLifetime) {
+             if (auto* expiresDate = soup_cookie_get_expires(cookie.get())) {
++#if USE(SOUP2)
++                auto timeIntervalSinceNow = Seconds(static_cast<double>(soup_date_to_time_t(expiresDate))) - WallTime::now().secondsSinceEpoch();
++#else
+                 auto timeIntervalSinceNow = Seconds(static_cast<double>(g_date_time_to_unix(expiresDate))) - WallTime::now().secondsSinceEpoch();
++#endif
+                 if (timeIntervalSinceNow > cappedLifetime.value())
+                     soup_cookie_set_max_age(cookie.get(), cappedLifetime->secondsAs<int>());
+             }
+         }
+ 
++#if SOUP_CHECK_VERSION(2, 67, 1)
+         soup_cookie_jar_add_cookie_full(jar, cookie.release(), origin.get(), firstPartyURI.get());
++#else
++        soup_cookie_jar_add_cookie_with_first_party(jar, firstPartyURI.get(), cookie.release());
++#endif
+     }
+ 
+     soup_cookies_free(existingCookies);
+@@ -483,7 +497,12 @@ bool NetworkStorageSession::setCookieFromDOM(const URL& firstParty, const SameSi
+     }
+     soup_cookies_free(existingCookies);
+ 
++#if SOUP_CHECK_VERSION(2, 67, 1)
+     soup_cookie_jar_add_cookie_full(cookieStorage(), soupCookie.release(), uri.get(), firstPartyURI.get());
++#else
++    soup_cookie_jar_add_cookie_with_first_party(cookieStorage(), firstPartyURI.get(), soupCookie.release());
++    UNUSED_PARAM(uri);
++#endif
+ 
+     return true;
+ }
+@@ -491,9 +510,16 @@ bool NetworkStorageSession::setCookieFromDOM(const URL& firstParty, const SameSi
+ void NetworkStorageSession::setCookies(const Vector<Cookie>& cookies, const URL& url, const URL& firstParty)
+ {
+     for (auto cookie : cookies) {
++#if SOUP_CHECK_VERSION(2, 67, 1)
+         auto origin = urlToSoupURI(url);
+         auto firstPartyURI = urlToSoupURI(firstParty);
++
+         soup_cookie_jar_add_cookie_full(cookieStorage(), cookie.toSoupCookie(), origin.get(), firstPartyURI.get());
++#else
++        UNUSED_PARAM(url);
++        UNUSED_PARAM(firstParty);
++        soup_cookie_jar_add_cookie(cookieStorage(), cookie.toSoupCookie());
++#endif
+     }
+ }
+ 
+@@ -669,6 +695,7 @@ static std::optional<CookieList> lookupCookies(const NetworkStorageSession& sess
+     if (!uri)
+         return std::nullopt;
+ 
++#if SOUP_CHECK_VERSION(2, 69, 90)
+     auto firstPartyURI = urlToSoupURI(firstParty);
+     if (!firstPartyURI)
+         return std::nullopt;
+@@ -676,6 +703,9 @@ static std::optional<CookieList> lookupCookies(const NetworkStorageSession& sess
+     auto cookieURI = sameSiteInfo.isSameSite ? urlToSoupURI(url) : nullptr;
+     CookieList cookies(soup_cookie_jar_get_cookie_list_with_same_site_info(session.cookieStorage(), uri.get(), firstPartyURI.get(), cookieURI.get(), forHTTPHeader == ForHTTPHeader::Yes,
+         sameSiteInfo.isSafeHTTPMethod, sameSiteInfo.isTopSite));
++#else
++    CookieList cookies(soup_cookie_jar_get_cookie_list(session.cookieStorage(), uri.get(), forHTTPHeader == ForHTTPHeader::Yes));
++#endif
+     if (!cookies)
+         return nullptr;
+ 
+diff --git a/Source/WebCore/platform/network/soup/ResourceErrorSoup.cpp b/Source/WebCore/platform/network/soup/ResourceErrorSoup.cpp
+index efb31f2c864d..db0725eddd21 100644
+--- a/Source/WebCore/platform/network/soup/ResourceErrorSoup.cpp
++++ b/Source/WebCore/platform/network/soup/ResourceErrorSoup.cpp
+@@ -36,6 +36,12 @@
+ 
+ namespace WebCore {
+ 
++#if USE(SOUP2)
++#define SOUP_HTTP_ERROR_DOMAIN SOUP_HTTP_ERROR
++#else
++#define SOUP_HTTP_ERROR_DOMAIN SOUP_SESSION_ERROR
++#endif
++
+ ResourceError::ResourceError(const String& domain, int errorCode, const URL& failingURL, const String& localizedDescription, Type type, IsSanitized isSanitized)
+     : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription, type, isSanitized)
+ {
+@@ -77,20 +83,29 @@ auto ResourceError::ipcData() const -> std::optional<IPCData>
+ 
+ ResourceError ResourceError::transportError(const URL& failingURL, int statusCode, const String& reasonPhrase)
+ {
+-    return ResourceError(String::fromLatin1(g_quark_to_string(SOUP_SESSION_ERROR)), statusCode, failingURL, reasonPhrase);
++    return ResourceError(String::fromLatin1(g_quark_to_string(SOUP_HTTP_ERROR_DOMAIN)), statusCode, failingURL, reasonPhrase);
+ }
+ 
+ ResourceError ResourceError::httpError(SoupMessage* message, GError* error)
+ {
+     ASSERT(message);
++#if USE(SOUP2)
++    if (SOUP_STATUS_IS_TRANSPORT_ERROR(message->status_code))
++        return transportError(soupURIToURL(soup_message_get_uri(message)), message->status_code, String::fromUTF8(message->reason_phrase));
++#endif
+     return genericGError(soupURIToURL(soup_message_get_uri(message)), error);
+ }
+ 
+ ResourceError ResourceError::authenticationError(SoupMessage* message)
+ {
+     ASSERT(message);
++#if USE(SOUP2)
++    return ResourceError(String::fromLatin1(g_quark_to_string(SOUP_HTTP_ERROR_DOMAIN)), message->status_code,
++        soupURIToURL(soup_message_get_uri(message)), String::fromUTF8(message->reason_phrase));
++#else
+     return ResourceError(String::fromLatin1(g_quark_to_string(SOUP_SESSION_ERROR)), soup_message_get_status(message),
+         soup_message_get_uri(message), String::fromUTF8(soup_message_get_reason_phrase(message)));
++#endif
+ }
+ 
+ ResourceError ResourceError::genericGError(const URL& failingURL, GError* error)
+diff --git a/Source/WebCore/platform/network/soup/ResourceRequest.h b/Source/WebCore/platform/network/soup/ResourceRequest.h
+index 98e8c082c695..ab7ed161b9f7 100644
+--- a/Source/WebCore/platform/network/soup/ResourceRequest.h
++++ b/Source/WebCore/platform/network/soup/ResourceRequest.h
+@@ -101,7 +101,11 @@ public:
+ private:
+     friend class ResourceRequestBase;
+ 
++#if USE(SOUP2)
++    GUniquePtr<SoupURI> createSoupURI() const;
++#else
+     GRefPtr<GUri> createSoupURI() const;
++#endif
+ 
+     void doUpdatePlatformRequest() { }
+     void doUpdateResourceRequest() { }
+diff --git a/Source/WebCore/platform/network/soup/ResourceRequestSoup.cpp b/Source/WebCore/platform/network/soup/ResourceRequestSoup.cpp
+index bca32f9cb362..fd8c094594c7 100644
+--- a/Source/WebCore/platform/network/soup/ResourceRequestSoup.cpp
++++ b/Source/WebCore/platform/network/soup/ResourceRequestSoup.cpp
+@@ -29,6 +29,7 @@
+ #include "MIMETypeRegistry.h"
+ #include "RegistrableDomain.h"
+ #include "SharedBuffer.h"
++#include "SoupVersioning.h"
+ #include "URLSoup.h"
+ #include "WebKitFormDataInputStream.h"
+ #include <wtf/text/CString.h>
+@@ -71,6 +72,7 @@ GRefPtr<SoupMessage> ResourceRequest::createSoupMessage(BlobRegistryImpl& blobRe
+             soup_message_set_first_party(soupMessage.get(), firstParty.get());
+     }
+ 
++#if SOUP_CHECK_VERSION(2, 69, 90)
+     if (!isSameSiteUnspecified()) {
+         if (isSameSite()) {
+             auto siteForCookies = urlToSoupURI(m_requestData.m_url);
+@@ -78,6 +80,7 @@ GRefPtr<SoupMessage> ResourceRequest::createSoupMessage(BlobRegistryImpl& blobRe
+         }
+         soup_message_set_is_top_level_navigation(soupMessage.get(), isTopSite());
+     }
++#endif
+ 
+     if (!acceptEncoding())
+         soup_message_disable_feature(soupMessage.get(), SOUP_TYPE_CONTENT_DECODER);
+@@ -99,8 +102,12 @@ void ResourceRequest::updateSoupMessageBody(SoupMessage* soupMessage, BlobRegist
+     auto& elements = formData->elements();
+     if (elements.size() == 1 && !formData->alwaysStream()) {
+         if (auto* vector = std::get_if<Vector<uint8_t>>(&elements[0].data)) {
++#if USE(SOUP2)
++            soup_message_body_append(soupMessage->request_body, SOUP_MEMORY_TEMPORARY, vector->span().data(), vector->size());
++#else
+             GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new_static(vector->span().data(), vector->size()));
+             soup_message_set_request_body_from_bytes(soupMessage, nullptr, bytes.get());
++#endif
+             return;
+         }
+     }
+@@ -118,7 +125,19 @@ void ResourceRequest::updateSoupMessageBody(SoupMessage* soupMessage, BlobRegist
+         return;
+ 
+     GRefPtr<GInputStream> stream = webkitFormDataInputStreamNew(WTF::move(resolvedFormData));
++#if USE(SOUP2)
++    if (GBytes* data = webkitFormDataInputStreamReadAll(WEBKIT_FORM_DATA_INPUT_STREAM(stream.get()))) {
++        soup_message_body_set_accumulate(soupMessage->request_body, FALSE);
++        auto* soupBuffer = soup_buffer_new_with_owner(g_bytes_get_data(data, nullptr),
++            g_bytes_get_size(data), data, reinterpret_cast<GDestroyNotify>(g_bytes_unref));
++        soup_message_body_append_buffer(soupMessage->request_body, soupBuffer);
++        soup_buffer_free(soupBuffer);
++    }
++    ASSERT(length == static_cast<uint64_t>(soupMessage->request_body->length));
++#else
+     soup_message_set_request_body(soupMessage, nullptr, stream.get(), length);
++#endif
++
+ }
+ 
+ GRefPtr<GInputStream> ResourceRequest::createBodyStream() const
+@@ -164,10 +183,39 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
+     return 10000;
+ }
+ 
++#if USE(SOUP2)
++GUniquePtr<SoupURI> ResourceRequest::createSoupURI() const
++{
++    // WebKit does not support fragment identifiers in data URLs, but soup does.
++    // Before passing the URL to soup, we should make sure to urlencode any '#'
++    // characters, so that soup does not interpret them as fragment identifiers.
++    // See http://wkbug.com/68089
++    if (m_requestData.m_url.protocolIsData()) {
++        String urlString = makeStringByReplacingAll(m_requestData.m_url.string(), '#', "%23"_s);
++        return GUniquePtr<SoupURI>(soup_uri_new(urlString.utf8().data()));
++    }
++
++    GUniquePtr<SoupURI> soupURI = urlToSoupURI(m_requestData.m_url);
++
++    // Versions of libsoup prior to 2.42 have a soup_uri_new that will convert empty passwords that are not
++    // prefixed by a colon into null. Some parts of soup like the SoupAuthenticationManager will only be active
++    // when both the username and password are non-null. When we have credentials, empty usernames and passwords
++    // should be empty strings instead of null.
++    String urlUser = m_requestData.m_url.user();
++    String urlPass = m_requestData.m_url.password();
++    if (!urlUser.isEmpty() || !urlPass.isEmpty()) {
++        soup_uri_set_user(soupURI.get(), urlUser.utf8().data());
++        soup_uri_set_password(soupURI.get(), urlPass.utf8().data());
++    }
++
++    return soupURI;
++}
++#else
+ GRefPtr<GUri> ResourceRequest::createSoupURI() const
+ {
+     return m_requestData.m_url.createGUri();
+ }
++#endif
+ 
+ void ResourceRequest::updateFromDelegatePreservingOldProperties(const ResourceRequest& delegateProvidedRequest)
+ {
+diff --git a/Source/WebCore/platform/network/soup/ResourceResponseSoup.cpp b/Source/WebCore/platform/network/soup/ResourceResponseSoup.cpp
+index 5aea30714a01..1ae165956629 100644
+--- a/Source/WebCore/platform/network/soup/ResourceResponseSoup.cpp
++++ b/Source/WebCore/platform/network/soup/ResourceResponseSoup.cpp
+@@ -28,6 +28,7 @@
+ #include "HTTPHeaderNames.h"
+ #include "HTTPParsers.h"
+ #include "MIMETypeRegistry.h"
++#include "SoupVersioning.h"
+ #include "URLSoup.h"
+ #include <unicode/uset.h>
+ #include <wtf/text/CString.h>
+@@ -46,9 +47,11 @@ ResourceResponse::ResourceResponse(SoupMessage* soupMessage, const CString& snif
+     case SOUP_HTTP_1_1:
+         m_httpVersion = "HTTP/1.1"_s;
+         break;
++#if SOUP_CHECK_VERSION(2, 99, 3)
+     case SOUP_HTTP_2_0:
+         m_httpVersion = "HTTP/2"_s;
+         break;
++#endif
+     }
+ 
+     m_httpStatusCode = soup_message_get_status(soupMessage);
+diff --git a/Source/WebCore/platform/network/soup/SoupNetworkSession.cpp b/Source/WebCore/platform/network/soup/SoupNetworkSession.cpp
+index 4ffd156d0275..70664cf1b41b 100644
+--- a/Source/WebCore/platform/network/soup/SoupNetworkSession.cpp
++++ b/Source/WebCore/platform/network/soup/SoupNetworkSession.cpp
+@@ -32,6 +32,7 @@
+ #include "AuthenticationChallenge.h"
+ #include "GUniquePtrSoup.h"
+ #include "Logging.h"
++#include "SoupVersioning.h"
+ #include "WebKitAutoconfigProxyResolver.h"
+ #include <glib/gstdio.h>
+ #include <libsoup/soup.h>
+@@ -111,8 +112,12 @@ SoupNetworkSession::SoupNetworkSession(PAL::SessionID sessionID)
+ 
+     soup_session_add_feature_by_type(m_soupSession.get(), SOUP_TYPE_CONTENT_SNIFFER);
+     soup_session_add_feature_by_type(m_soupSession.get(), SOUP_TYPE_AUTH_NTLM);
++#if SOUP_CHECK_VERSION(2, 67, 1)
+     soup_session_add_feature_by_type(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER);
++#endif
++#if SOUP_CHECK_VERSION(2, 67, 90)
+     soup_session_add_feature_by_type(m_soupSession.get(), SOUP_TYPE_WEBSOCKET_EXTENSION_MANAGER);
++#endif
+ 
+     if (!initialAcceptLanguages().isNull())
+         setAcceptLanguages(initialAcceptLanguages());
+@@ -149,7 +154,11 @@ void SoupNetworkSession::setupLogger()
+     if (LogNetwork.state != WTFLogChannelState::On || soup_session_get_feature(m_soupSession.get(), SOUP_TYPE_LOGGER))
+         return;
+ 
++#if USE(SOUP2)
++    GRefPtr<SoupLogger> logger = adoptGRef(soup_logger_new(SOUP_LOGGER_LOG_BODY, -1));
++#else
+     GRefPtr<SoupLogger> logger = adoptGRef(soup_logger_new(SOUP_LOGGER_LOG_BODY));
++#endif
+     soup_session_add_feature(m_soupSession.get(), SOUP_SESSION_FEATURE(logger.get()));
+     soup_logger_set_printer(logger.get(), soupLogPrinter, nullptr, nullptr);
+ #endif
+@@ -172,6 +181,7 @@ void SoupNetworkSession::setHSTSPersistentStorage(const String& directory)
+     if (m_sessionID.isEphemeral())
+         return;
+ 
++#if SOUP_CHECK_VERSION(2, 67, 1)
+     if (!FileSystem::makeAllDirectories(directory)) {
+         RELEASE_LOG_ERROR(Network, "Unable to create the HSTS storage directory \"%s\". Using a memory enforcer instead.", directory.utf8().data());
+         return;
+@@ -182,10 +192,14 @@ void SoupNetworkSession::setHSTSPersistentStorage(const String& directory)
+     GRefPtr<SoupHSTSEnforcer> enforcer = adoptGRef(soup_hsts_enforcer_db_new(dbFilename.get()));
+     soup_session_remove_feature_by_type(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER);
+     soup_session_add_feature(m_soupSession.get(), SOUP_SESSION_FEATURE(enforcer.get()));
++#else
++    UNUSED_PARAM(directory);
++#endif
+ }
+ 
+ void SoupNetworkSession::getHostNamesWithHSTSCache(HashSet<String>& hostNames)
+ {
++#if SOUP_CHECK_VERSION(2, 67, 91)
+     auto* enforcer = SOUP_HSTS_ENFORCER(soup_session_get_feature(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER));
+     ASSERT(enforcer);
+ 
+@@ -194,10 +208,14 @@ void SoupNetworkSession::getHostNamesWithHSTSCache(HashSet<String>& hostNames)
+         GUniquePtr<gchar> domain(static_cast<gchar*>(iter->data));
+         hostNames.add(String::fromUTF8(domain.get()));
+     }
++#else
++    UNUSED_PARAM(hostNames);
++#endif
+ }
+ 
+ void SoupNetworkSession::deleteHSTSCacheForHostNames(const Vector<String>& hostNames)
+ {
++#if SOUP_CHECK_VERSION(2, 67, 1)
+     auto* enforcer = SOUP_HSTS_ENFORCER(soup_session_get_feature(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER));
+     ASSERT(enforcer);
+ 
+@@ -205,22 +223,33 @@ void SoupNetworkSession::deleteHSTSCacheForHostNames(const Vector<String>& hostN
+         GUniquePtr<SoupHSTSPolicy> policy(soup_hsts_policy_new(hostName.utf8().data(), SOUP_HSTS_POLICY_MAX_AGE_PAST, FALSE));
+         soup_hsts_enforcer_set_policy(enforcer, policy.get());
+     }
++#else
++    UNUSED_PARAM(hostNames);
++#endif
+ }
+ 
+ void SoupNetworkSession::clearHSTSCache(WallTime modifiedSince)
+ {
++#if SOUP_CHECK_VERSION(2, 67, 91)
+     auto* enforcer = SOUP_HSTS_ENFORCER(soup_session_get_feature(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER));
+     ASSERT(enforcer);
+ 
+     GUniquePtr<GList> policies(soup_hsts_enforcer_get_policies(enforcer, FALSE));
+     for (GList* iter = policies.get(); iter != nullptr; iter = iter->next) {
+         GUniquePtr<SoupHSTSPolicy> policy(static_cast<SoupHSTSPolicy*>(iter->data));
++#if USE(SOUP2)
++        auto modified = soup_date_to_time_t(policy.get()->expires) - policy.get()->max_age;
++#else
+         auto modified = g_date_time_to_unix(soup_hsts_policy_get_expires(policy.get())) - soup_hsts_policy_get_max_age(policy.get());
++#endif
+         if (modified >= modifiedSince.secondsSinceEpoch().seconds()) {
+             GUniquePtr<SoupHSTSPolicy> newPolicy(soup_hsts_policy_new(soup_hsts_policy_get_domain(policy.get()), SOUP_HSTS_POLICY_MAX_AGE_PAST, FALSE));
+             soup_hsts_enforcer_set_policy(enforcer, newPolicy.get());
+         }
+     }
++#else
++    UNUSED_PARAM(modifiedSince);
++#endif
+ }
+ 
+ static inline bool stringIsNumeric(const std::string_view& str)
+diff --git a/Source/WebCore/platform/network/soup/SoupVersioning.h b/Source/WebCore/platform/network/soup/SoupVersioning.h
+new file mode 100644
+index 000000000000..4895e0c69900
+--- /dev/null
++++ b/Source/WebCore/platform/network/soup/SoupVersioning.h
+@@ -0,0 +1,168 @@
++/*
++ * Copyright (C) 2021 Igalia S.L.
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Library General Public
++ * License as published by the Free Software Foundation; either
++ * version 2 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Library General Public License for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this library; see the file COPYING.LIB.  If not, write to
++ * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA 02110-1301, USA.
++ */
++
++#pragma once
++
++#include <libsoup/soup.h>
++
++#if USE(SOUP2)
++
++static inline const char*
++soup_message_get_method(SoupMessage* message)
++{
++    g_return_val_if_fail(SOUP_IS_MESSAGE(message), nullptr);
++    return message->method;
++}
++
++static inline const char*
++soup_server_message_get_method(SoupMessage* message)
++{
++    return soup_message_get_method(message);
++}
++
++static inline SoupStatus
++soup_message_get_status(SoupMessage* message)
++{
++    g_return_val_if_fail(SOUP_IS_MESSAGE(message), SOUP_STATUS_NONE);
++    return static_cast<SoupStatus>(message->status_code);
++}
++
++static inline void
++soup_server_message_set_status(SoupMessage* message, unsigned statusCode, const char* reasonPhrase)
++{
++    if (reasonPhrase)
++        soup_message_set_status_full(message, statusCode, reasonPhrase);
++    else
++        soup_message_set_status(message, statusCode);
++}
++
++static inline const char*
++soup_message_get_reason_phrase(SoupMessage* message)
++{
++    g_return_val_if_fail(SOUP_IS_MESSAGE(message), nullptr);
++    return message->reason_phrase;
++}
++
++static inline SoupMessageHeaders*
++soup_message_get_request_headers(SoupMessage* message)
++{
++    g_return_val_if_fail(SOUP_IS_MESSAGE(message), nullptr);
++    return message->request_headers;
++}
++
++static inline SoupMessageHeaders*
++soup_server_message_get_request_headers(SoupMessage* message)
++{
++    return soup_message_get_request_headers(message);
++}
++
++static inline SoupMessageHeaders*
++soup_message_get_response_headers(SoupMessage* message)
++{
++    g_return_val_if_fail(SOUP_IS_MESSAGE(message), nullptr);
++    return message->response_headers;
++}
++
++static inline SoupMessageHeaders*
++soup_server_message_get_response_headers(SoupMessage* message)
++{
++    return soup_message_get_response_headers(message);
++}
++
++static inline SoupMessageBody*
++soup_server_message_get_response_body(SoupMessage* message)
++{
++    g_return_val_if_fail(SOUP_IS_MESSAGE(message), nullptr);
++    return message->response_body;
++}
++
++static inline void
++soup_server_message_set_response(SoupMessage* message, const char* contentType, SoupMemoryUse memoryUse, const char* responseBody, gsize length)
++{
++    return soup_message_set_response(message, contentType, memoryUse, responseBody, length);
++}
++
++static inline SoupURI*
++soup_server_message_get_uri(SoupMessage* message)
++{
++    return soup_message_get_uri(message);
++}
++
++static inline GTlsCertificate*
++soup_message_get_tls_peer_certificate(SoupMessage* message)
++{
++    g_return_val_if_fail(SOUP_IS_MESSAGE(message), nullptr);
++    GTlsCertificate* certificate = nullptr;
++    soup_message_get_https_status(message, &certificate, nullptr);
++    return certificate;
++}
++
++static inline GTlsCertificateFlags
++soup_message_get_tls_peer_certificate_errors(SoupMessage* message)
++{
++    g_return_val_if_fail(SOUP_IS_MESSAGE(message), static_cast<GTlsCertificateFlags>(0));
++    GTlsCertificateFlags flags = static_cast<GTlsCertificateFlags>(0);
++    soup_message_get_https_status(message, nullptr, &flags);
++    return flags;
++}
++
++static inline void
++soup_session_send_async(SoupSession* session, SoupMessage* message, int, GCancellable* cancellable, GAsyncReadyCallback callback, gpointer userData)
++{
++    soup_session_send_async(session, message, cancellable, callback, userData);
++}
++
++static inline void
++soup_session_websocket_connect_async(SoupSession* session, SoupMessage* message, const char* origin, char** protocols, int, GCancellable* cancellable, GAsyncReadyCallback callback, gpointer userData)
++{
++    soup_session_websocket_connect_async(session, message, origin, protocols, cancellable, callback, userData);
++}
++
++static inline void
++soup_auth_cancel(SoupAuth*)
++{
++}
++
++static inline void
++soup_session_set_proxy_resolver(SoupSession* session, GProxyResolver* resolver)
++{
++    g_object_set(session, "proxy-resolver", resolver, nullptr);
++}
++
++static inline GProxyResolver*
++soup_session_get_proxy_resolver(SoupSession* session)
++{
++    GRefPtr<GProxyResolver> resolver;
++    g_object_get(session, "proxy-resolver", &resolver.outPtr(), nullptr);
++    return resolver.get();
++}
++
++static inline void
++soup_session_set_accept_language(SoupSession* session, const char* acceptLanguage)
++{
++    g_object_set(session, "accept-language", acceptLanguage, nullptr);
++}
++
++static inline void
++soup_session_set_tls_database(SoupSession *session, GTlsDatabase *tls_database)
++{
++    g_object_set(session, "tls-database", tls_database, NULL);
++}
++
++#endif // USE(SOUP2)
+diff --git a/Source/WebCore/platform/network/soup/URLSoup.cpp b/Source/WebCore/platform/network/soup/URLSoup.cpp
+index 9b2f7b06c41e..351e52893399 100644
+--- a/Source/WebCore/platform/network/soup/URLSoup.cpp
++++ b/Source/WebCore/platform/network/soup/URLSoup.cpp
+@@ -30,6 +30,37 @@
+ 
+ namespace WebCore {
+ 
++#if USE(SOUP2)
++URL soupURIToURL(SoupURI* soupURI)
++{
++    if (!soupURI)
++        return URL();
++
++    GUniquePtr<gchar> urlString(soup_uri_to_string(soupURI, FALSE));
++    URL url { String::fromUTF8(urlString.get()) };
++    if (url.isValid()) {
++        // Motivated by https://bugs.webkit.org/show_bug.cgi?id=38956. libsoup
++        // does not add the password to the URL when calling
++        // soup_uri_to_string, and thus the requests are not properly
++        // built. Fixing soup_uri_to_string is a no-no as the maintainer does
++        // not want to break compatibility with previous implementations
++        if (soupURI->password)
++            url.setPassword(String::fromUTF8(soupURI->password));
++    }
++
++    return url;
++}
++
++GUniquePtr<SoupURI> urlToSoupURI(const URL& url)
++{
++    if (!url.isValid())
++        return nullptr;
++
++    return GUniquePtr<SoupURI>(soup_uri_new(url.string().utf8().data()));
++}
++
++#else // !USE(SOUP2)
++
+ URL soupURIToURL(GUri* uri)
+ {
+     return uri;
+@@ -39,5 +70,6 @@ GRefPtr<GUri> urlToSoupURI(const URL& url)
+ {
+     return url.createGUri();
+ }
++#endif // USE(SOUP2)
+ 
+ } // namespace WebCore
+diff --git a/Source/WebCore/platform/network/soup/URLSoup.h b/Source/WebCore/platform/network/soup/URLSoup.h
+index ac87352f192c..64b62035235b 100644
+--- a/Source/WebCore/platform/network/soup/URLSoup.h
++++ b/Source/WebCore/platform/network/soup/URLSoup.h
+@@ -33,6 +33,11 @@ class URL;
+ }
+ 
+ namespace WebCore {
++#if USE(SOUP2)
++URL soupURIToURL(SoupURI*);
++GUniquePtr<SoupURI> urlToSoupURI(const URL&);
++#else
+ URL soupURIToURL(GUri*);
+ GRefPtr<GUri> urlToSoupURI(const URL&);
++#endif
+ } // namespace WebCore
+diff --git a/Source/WebDriver/soup/HTTPServerSoup.cpp b/Source/WebDriver/soup/HTTPServerSoup.cpp
+index 86ac0010dcc9..45188492faf7 100644
+--- a/Source/WebDriver/soup/HTTPServerSoup.cpp
++++ b/Source/WebDriver/soup/HTTPServerSoup.cpp
+@@ -60,6 +60,25 @@ bool HTTPServer::listen(const std::optional<String>& host, unsigned port)
+         return false;
+     }
+ 
++#if USE(SOUP2)
++    soup_server_add_handler(m_soupServer.get(), nullptr, [](SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer userData) {
++        auto* httpServer = static_cast<HTTPServer*>(userData);
++        GRefPtr<SoupMessage> protectedMessage = message;
++        soup_server_pause_message(server, message);
++        httpServer->m_requestHandler.handleRequest({ String::fromUTF8(message->method), String::fromUTF8(path), message->request_body->data, static_cast<size_t>(message->request_body->length) },
++            [server, message = WTF::move(protectedMessage)](HTTPRequestHandler::Response&& response) {
++                soup_message_set_status(message.get(), response.statusCode);
++                if (!response.data.isNull()) {
++                    // §6.3 Processing Model.
++                    // https://w3c.github.io/webdriver/webdriver-spec.html#dfn-send-a-response
++                    soup_message_headers_append(message->response_headers, "Content-Type", response.contentType.utf8().data());
++                    soup_message_headers_append(message->response_headers, "Cache-Control", "no-cache");
++                    soup_message_body_append(message->response_body, SOUP_MEMORY_COPY, response.data.data(), response.data.length());
++                }
++                soup_server_unpause_message(server, message.get());
++        });
++    }, this, nullptr);
++#else
+     soup_server_add_handler(m_soupServer.get(), nullptr, [](SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer userData) {
+         auto& httpServer = *static_cast<HTTPServer*>(userData);
+         GRefPtr<SoupServerMessage> protectedMessage = message;
+@@ -86,6 +105,7 @@ bool HTTPServer::listen(const std::optional<String>& host, unsigned port)
+                 soup_server_unpause_message(server, message.get());
+         });
+     }, this, nullptr);
++#endif
+ 
+     return true;
+ }
+diff --git a/Source/WebDriver/soup/WebSocketServerSoup.cpp b/Source/WebDriver/soup/WebSocketServerSoup.cpp
+index 9bd92c8a4ce4..bb743aa45831 100644
+--- a/Source/WebDriver/soup/WebSocketServerSoup.cpp
++++ b/Source/WebDriver/soup/WebSocketServerSoup.cpp
+@@ -41,6 +41,8 @@
+ 
+ namespace WebDriver {
+ 
++#if !USE(SOUP2)
++
+ static bool soupServerListen(SoupServer* server, const String& host, unsigned port, GError** error)
+ {
+     static const auto options = static_cast<SoupServerListenOptions>(0);
+@@ -134,9 +136,17 @@ static void handleWebSocketConnection(SoupServer*, SoupServerMessage*, const cha
+ 
+     g_signal_connect(connection, "message", G_CALLBACK(handleWebSocketMessage), webSocketServer);
+ }
++#endif // !USE(SOUP2)
+ 
+ std::optional<String> WebSocketServer::listen(const String& host, unsigned port)
+ {
++#if USE(SOUP2)
++    UNUSED_PARAM(host);
++    UNUSED_PARAM(port);
++    RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
++    return std::nullopt;
++#else
++
+     m_soupServer = adoptGRef(soup_server_new("server-header", "WebKitWebDriver-WSS", nullptr));
+     GUniqueOutPtr<GError> error;
+     if (!soupServerListen(m_soupServer.get(), host, port, &error.outPtr())) {
+@@ -158,18 +168,28 @@ std::optional<String> WebSocketServer::listen(const String& host, unsigned port)
+         { "/session"_s }
+     );
+     return getWebSocketURL(m_listener, nullString());
++#endif
+ }
+ 
+ void WebSocketServer::sendMessage(WebSocketMessageHandler::Connection connection, const String& message)
+ {
++#if USE(SOUP2)
++    UNUSED_PARAM(connection);
++    UNUSED_PARAM(message);
++    RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
++#else
+     ASSERT(connection);
+     RELEASE_LOG(WebDriverBiDi, "Sending message: %s", message.utf8().data());
+     GRefPtr<GBytes> rawMessage = adoptGRef(g_bytes_new(message.utf8().data(), message.utf8().length()));
+     soup_websocket_connection_send_message(connection.get(), SOUP_WEBSOCKET_DATA_TEXT, rawMessage.get());
++#endif
+ }
+ 
+ void WebSocketServer::disconnect()
+ {
++#if USE(SOUP2)
++    RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
++#else
+     if (!m_soupServer)
+         return;
+ 
+@@ -181,16 +201,22 @@ void WebSocketServer::disconnect()
+ 
+     soup_server_disconnect(m_soupServer.get());
+     m_soupServer = nullptr;
++#endif
+ }
+ 
+ void WebSocketServer::disconnectSession(const String& sessionId)
+ {
++#if USE(SOUP2)
++    UNUSED_PARAM(sessionId);
++    RELEASE_LOG(WebDriverBiDi, "WebSockets support not implemented yet with libsoup2");
++#else
+     auto connection = this->connection(sessionId);
+     if (!connection || !connection->get())
+         return;
+ 
+     soup_websocket_connection_close(connection->get(), SOUP_WEBSOCKET_CLOSE_NORMAL, nullptr);
+     g_signal_handlers_disconnect_by_data(connection->get(), this);
++#endif
+ }
+ 
+ } // namespace WebDriver
+diff --git a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
+index 76fdb1c19f39..d2b8b2b27073 100644
+--- a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
++++ b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
+@@ -44,6 +44,7 @@
+ #include <WebCore/SharedBuffer.h>
+ #include <WebCore/ShouldRelaxThirdPartyCookieBlocking.h>
+ #include <WebCore/SoupNetworkSession.h>
++#include <WebCore/SoupVersioning.h>
+ #include <WebCore/TimingAllowOrigin.h>
+ #include <pal/text/TextEncoding.h>
+ #include <wtf/MainThread.h>
+@@ -66,6 +67,10 @@ NetworkDataTaskSoup::NetworkDataTaskSoup(NetworkSession& session, NetworkDataTas
+ {
+     auto request = parameters.request;
+     if (request.url().protocolIsInHTTPFamily()) {
++#if USE(SOUP2)
++        m_networkLoadMetrics.fetchStart = MonotonicTime::now();
++        m_networkLoadMetrics.redirectStart = m_networkLoadMetrics.fetchStart;
++#endif
+         auto url = request.url();
+         if (m_storedCredentialsPolicy == StoredCredentialsPolicy::Use) {
+             m_user = url.user();
+@@ -156,18 +161,28 @@ void NetworkDataTaskSoup::createRequest(ResourceRequest&& request, WasBlockingCo
+     }
+ 
+     if (m_shouldPreconnectOnly == PreconnectOnly::Yes) {
++#if !USE(SOUP2)
+         g_signal_connect(m_soupMessage.get(), "accept-certificate", G_CALLBACK(acceptCertificateCallback), this);
++#endif
+         return;
+     }
+ 
+     m_networkLoadMetrics.redirectCount = m_currentRequest.redirectCount();
+ 
+     unsigned messageFlags = SOUP_MESSAGE_NO_REDIRECT;
++#if !USE(SOUP2)
+     messageFlags |= SOUP_MESSAGE_COLLECT_METRICS;
++#endif
+     if (m_shouldContentSniff == ContentSniffingPolicy::DoNotSniffContent)
+         soup_message_disable_feature(m_soupMessage.get(), SOUP_TYPE_CONTENT_SNIFFER);
+     if (m_user.isEmpty() && m_password.isEmpty() && m_storedCredentialsPolicy == StoredCredentialsPolicy::DoNotUse) {
++#if SOUP_CHECK_VERSION(2, 57, 1)
+         messageFlags |= SOUP_MESSAGE_DO_NOT_USE_AUTH_CACHE;
++#else
++        // In case credential is not available and credential storage should not to be used,
++        // disable authentication manager so that credentials stored in libsoup are not used.
++        soup_message_disable_feature(m_soupMessage.get(), SOUP_TYPE_AUTH_MANAGER);
++#endif
+     }
+     soup_message_set_flags(m_soupMessage.get(), static_cast<SoupMessageFlags>(soup_message_get_flags(m_soupMessage.get()) | messageFlags));
+ 
+@@ -180,18 +195,37 @@ void NetworkDataTaskSoup::createRequest(ResourceRequest&& request, WasBlockingCo
+         soup_message_disable_feature(m_soupMessage.get(), SOUP_TYPE_COOKIE_JAR);
+     m_isBlockingCookies = shouldBlockCookies;
+ 
++#if SOUP_CHECK_VERSION(2, 67, 1)
+     if ((m_currentRequest.url().protocolIs("https"_s) && !shouldAllowHSTSPolicySetting()) || (m_currentRequest.url().protocolIs("http"_s) && !shouldAllowHSTSProtocolUpgrade()))
+         soup_message_disable_feature(m_soupMessage.get(), SOUP_TYPE_HSTS_ENFORCER);
+-    else
++    else {
++#if USE(SOUP2)
++        g_signal_connect(soup_session_get_feature(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), SOUP_TYPE_HSTS_ENFORCER), "hsts-enforced", G_CALLBACK(hstsEnforced), this);
++#else
+         g_signal_connect(m_soupMessage.get(), "hsts-enforced", G_CALLBACK(hstsEnforced), this);
++#endif
++    }
++#endif
+ 
+     // Make sure we have an Accept header for subresources; some sites want this to serve some of their subresources.
+     auto* requestHeaders = soup_message_get_request_headers(m_soupMessage.get());
+     if (!soup_message_headers_get_one(requestHeaders, "Accept"))
+         soup_message_headers_append(requestHeaders, "Accept", "*/*");
+ 
++#if USE(SOUP2)
++    // In the case of XHR .send() and .send("") explicitly tell libsoup to send a zero content-lenght header
++    // for consistency with other UA implementations like Firefox. It's done in the backend here instead of
++    // in XHR code since in XHR CORS checking prevents us from this kind of late header manipulation.
++    if ((m_soupMessage->method == SOUP_METHOD_POST || m_soupMessage->method == SOUP_METHOD_PUT) && !m_soupMessage->request_body->length)
++        soup_message_headers_set_content_length(m_soupMessage->request_headers, 0);
++#endif
++
+     g_signal_connect(m_soupMessage.get(), "got-headers", G_CALLBACK(gotHeadersCallback), this);
+     g_signal_connect(m_soupMessage.get(), "wrote-body-data", G_CALLBACK(wroteBodyDataCallback), this);
++#if USE(SOUP2)
++    g_signal_connect(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), "authenticate",  G_CALLBACK(authenticateCallback), this);
++    g_signal_connect(m_soupMessage.get(), "network-event", G_CALLBACK(networkEventCallback), this);
++#else
+     g_signal_connect(m_soupMessage.get(), "authenticate", G_CALLBACK(authenticateCallback), this);
+     g_signal_connect(m_soupMessage.get(), "accept-certificate", G_CALLBACK(acceptCertificateCallback), this);
+     g_signal_connect(m_soupMessage.get(), "got-body", G_CALLBACK(gotBodyCallback), this);
+@@ -201,6 +235,7 @@ void NetworkDataTaskSoup::createRequest(ResourceRequest&& request, WasBlockingCo
+     }
+     g_signal_connect(m_soupMessage.get(), "request-certificate", G_CALLBACK(requestCertificateCallback), this);
+     g_signal_connect(m_soupMessage.get(), "request-certificate-password", G_CALLBACK(requestCertificatePasswordCallback), this);
++#endif
+     g_signal_connect(m_soupMessage.get(), "restarted", G_CALLBACK(restartedCallback), this);
+     g_signal_connect(m_soupMessage.get(), "starting", G_CALLBACK(startingCallback), this);
+     if (m_shouldContentSniff == ContentSniffingPolicy::SniffContent)
+@@ -226,14 +261,27 @@ void NetworkDataTaskSoup::clearRequest()
+     m_isBlockingCookies = false;
+     if (m_soupMessage) {
+         g_signal_handlers_disconnect_matched(m_soupMessage.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
++#if USE(SOUP2)
++        if (m_session)
++            soup_session_cancel_message(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), m_soupMessage.get(), SOUP_STATUS_CANCELLED);
++#else
+         if (m_networkLoadMetrics.fetchStart && !m_networkLoadMetrics.responseEnd) {
+             auto* metrics = soup_message_get_metrics(m_soupMessage.get());
+             auto responseEnd = Seconds::fromMicroseconds(soup_message_metrics_get_response_end(metrics));
+             m_networkLoadMetrics.responseEnd = MonotonicTime::fromRawSeconds(responseEnd.seconds());
+             m_networkLoadMetrics.markComplete();
+         }
++#endif
+         m_soupMessage = nullptr;
+     }
++    if (m_session) {
++#if USE(SOUP2)
++        g_signal_handlers_disconnect_matched(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
++#if SOUP_CHECK_VERSION(2, 67, 1)
++        g_signal_handlers_disconnect_by_data(soup_session_get_feature(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), SOUP_TYPE_HSTS_ENFORCER), this);
++#endif
++#endif
++    }
+ }
+ 
+ void NetworkDataTaskSoup::resume()
+@@ -250,8 +298,12 @@ void NetworkDataTaskSoup::resume()
+     if (m_soupMessage && !m_cancellable) {
+         m_cancellable = adoptGRef(g_cancellable_new());
+         if (m_shouldPreconnectOnly == PreconnectOnly::Yes) {
++#if !USE(SOUP2)
+             soup_session_preconnect_async(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), m_soupMessage.get(), RunLoopSourcePriority::AsyncIONetwork, m_cancellable.get(),
+                 reinterpret_cast<GAsyncReadyCallback>(preconnectCallback), protectedThis.leakRef());
++#else
++            RELEASE_ASSERT_NOT_REACHED();
++#endif
+         } else {
+             // We need to protect cancellable here, because soup_session_send_async uses it after emitting SoupSession::request-queued, and we
+             // might cancel the operation in a feature callback emitted on request-queued, for example hsts-enforced.
+@@ -259,8 +311,12 @@ void NetworkDataTaskSoup::resume()
+             soup_session_send_async(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), m_soupMessage.get(), RunLoopSourcePriority::AsyncIONetwork, m_cancellable.get(),
+                 reinterpret_cast<GAsyncReadyCallback>(sendRequestCallback), new SendRequestData({ m_soupMessage, WTF::move(protectedThis) }));
+             if (!g_cancellable_is_cancelled(protectCancellable.get()) && !m_networkLoadMetrics.fetchStart) {
++#if USE(SOUP2)
++                m_networkLoadMetrics.fetchStart = MonotonicTime::now();
++#else
+                 auto* metrics = soup_message_get_metrics(m_soupMessage.get());
+                 m_networkLoadMetrics.fetchStart = MonotonicTime::fromRawSeconds(Seconds::fromMicroseconds(soup_message_metrics_get_fetch_start(metrics)).seconds());
++#endif
+                 if (!m_networkLoadMetrics.redirectStart)
+                     m_networkLoadMetrics.redirectStart = m_networkLoadMetrics.fetchStart;
+             }
+@@ -302,6 +358,11 @@ void NetworkDataTaskSoup::cancel()
+ 
+     m_state = State::Canceling;
+ 
++#if USE(SOUP2)
++    if (m_soupMessage)
++        soup_session_cancel_message(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), m_soupMessage.get(), SOUP_STATUS_CANCELLED);
++#endif
++
+     g_cancellable_cancel(m_cancellable.get());
+ 
+     if (isDownload())
+@@ -396,6 +457,10 @@ void NetworkDataTaskSoup::didSendRequest(GRefPtr<GInputStream>&& inputStream)
+     else
+         m_inputStream = WTF::move(inputStream);
+ 
++#if USE(SOUP2)
++    m_networkLoadMetrics.responseStart = MonotonicTime::now();
++#endif
++
+     dispatchDidReceiveResponse();
+ }
+ 
+@@ -440,6 +505,7 @@ void NetworkDataTaskSoup::dispatchDidReceiveResponse()
+     });
+ }
+ 
++#if !USE(SOUP2)
+ void NetworkDataTaskSoup::preconnectCallback(SoupSession* session, GAsyncResult* result, NetworkDataTaskSoup* task)
+ {
+     RefPtr<NetworkDataTaskSoup> protectedThis = adoptRef(task);
+@@ -455,12 +521,33 @@ void NetworkDataTaskSoup::preconnectCallback(SoupSession* session, GAsyncResult*
+     task->clearRequest();
+     task->dispatchDidCompleteWithError(resourceError);
+ }
++#endif
+ 
+ void NetworkDataTaskSoup::dispatchDidCompleteWithError(const ResourceError& error)
+ {
++#if USE(SOUP2)
++    m_networkLoadMetrics.responseEnd = MonotonicTime::now();
++    m_networkLoadMetrics.markComplete();
++#endif
++
+     m_client->didCompleteWithError(error, m_networkLoadMetrics);
+ }
+ 
++#if USE(SOUP2)
++gboolean NetworkDataTaskSoup::tlsConnectionAcceptCertificateCallback(GTlsConnection* connection, GTlsCertificate* certificate, GTlsCertificateFlags errors, NetworkDataTaskSoup* task)
++{
++    if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
++        task->clearRequest();
++        return FALSE;
++    }
++
++    auto* connectionMessage = g_object_get_data(G_OBJECT(connection), "wk-soup-message");
++    if (connectionMessage != task->m_soupMessage.get())
++        return FALSE;
++
++    return task->acceptCertificate(certificate, errors);
++}
++#else
+ gboolean NetworkDataTaskSoup::acceptCertificateCallback(SoupMessage* message, GTlsCertificate* certificate, GTlsCertificateFlags errors, NetworkDataTaskSoup* task)
+ {
+     if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client)
+@@ -470,6 +557,7 @@ gboolean NetworkDataTaskSoup::acceptCertificateCallback(SoupMessage* message, GT
+ 
+     return task->acceptCertificate(certificate, errors);
+ }
++#endif
+ 
+ bool NetworkDataTaskSoup::acceptCertificate(GTlsCertificate* certificate, GTlsCertificateFlags tlsErrors)
+ {
+@@ -534,6 +622,26 @@ void NetworkDataTaskSoup::applyAuthenticationToRequest(ResourceRequest& request)
+     m_password = String();
+ }
+ 
++#if USE(SOUP2)
++void NetworkDataTaskSoup::authenticateCallback(SoupSession* session, SoupMessage* soupMessage, SoupAuth* soupAuth, gboolean retrying, NetworkDataTaskSoup* task)
++{
++    ASSERT(session == static_cast<NetworkSessionSoup&>(*task->m_session).soupSession());
++
++    // We don't return early here in case the given soupMessage is different to m_soupMessage when
++    // it's proxy authentication and the request URL is HTTPS, because in that case libsoup uses a
++    // tunnel internally and the SoupMessage used for the authentication is the tunneling one.
++    // See https://bugs.webkit.org/show_bug.cgi?id=175378.
++    if (soupMessage != task->m_soupMessage.get() && (soupMessage->status_code != SOUP_STATUS_PROXY_AUTHENTICATION_REQUIRED || !task->m_currentRequest.url().protocolIs("https"_s)))
++        return;
++
++    if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
++        task->clearRequest();
++        return;
++    }
++
++    task->authenticate(AuthenticationChallenge(soupMessage, soupAuth, retrying));
++}
++#else
+ gboolean NetworkDataTaskSoup::authenticateCallback(SoupMessage* soupMessage, SoupAuth* soupAuth, gboolean retrying, NetworkDataTaskSoup* task)
+ {
+     if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
+@@ -545,6 +653,7 @@ gboolean NetworkDataTaskSoup::authenticateCallback(SoupMessage* soupMessage, Sou
+     task->authenticate(AuthenticationChallenge(soupMessage, soupAuth, retrying));
+     return TRUE;
+ }
++#endif
+ 
+ static inline bool isAuthenticationFailureStatusCode(int httpStatusCode)
+ {
+@@ -564,13 +673,21 @@ void NetworkDataTaskSoup::completeAuthentication(const AuthenticationChallenge&
+         soup_auth_authenticate(challenge.soupAuth(), credential.user().utf8().data(), credential.password().utf8().data());
+         break;
+     case ProtectionSpace::AuthenticationScheme::ClientCertificatePINRequested: {
++#if USE(SOUP2)
++        ASSERT_NOT_REACHED();
++#else
+         CString password = credential.password().utf8();
+         g_tls_password_set_value(challenge.tlsPassword(), reinterpret_cast<const unsigned char*>(password.data()), password.length());
+         soup_message_tls_client_certificate_password_request_complete(m_soupMessage.get());
++#endif
+         break;
+     }
+     case ProtectionSpace::AuthenticationScheme::ClientCertificateRequested:
++#if USE(SOUP2)
++        ASSERT_NOT_REACHED();
++#else
+         soup_message_set_tls_client_certificate(m_soupMessage.get(), credential.certificate());
++#endif
+         break;
+     case ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested:
+     case ProtectionSpace::AuthenticationScheme::Unknown:
+@@ -591,10 +708,18 @@ void NetworkDataTaskSoup::cancelAuthentication(const AuthenticationChallenge& ch
+         soup_auth_cancel(challenge.soupAuth());
+         break;
+     case ProtectionSpace::AuthenticationScheme::ClientCertificatePINRequested:
++#if USE(SOUP2)
++        ASSERT_NOT_REACHED();
++#else
+         soup_message_tls_client_certificate_password_request_complete(m_soupMessage.get());
++#endif
+         break;
+     case ProtectionSpace::AuthenticationScheme::ClientCertificateRequested:
++#if USE(SOUP2)
++        ASSERT_NOT_REACHED();
++#else
+         soup_message_set_tls_client_certificate(m_soupMessage.get(), nullptr);
++#endif
+         break;
+     case ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested:
+     case ProtectionSpace::AuthenticationScheme::Unknown:
+@@ -629,6 +754,10 @@ void NetworkDataTaskSoup::authenticate(AuthenticationChallenge&& challenge)
+         }
+     }
+ 
++#if USE(SOUP2)
++    soup_session_pause_message(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), challenge.soupMessage());
++#endif
++
+     // We could also do this before we even start the request, but that would be at the expense
+     // of all request latency, versus a one-time latency for the small subset of requests that
+     // use HTTP authentication. In the end, this doesn't matter much, because persistent credentials
+@@ -683,6 +812,10 @@ void NetworkDataTaskSoup::continueAuthenticate(AuthenticationChallenge&& challen
+             completeAuthentication(challenge, credential);
+         } else
+             cancelAuthentication(challenge);
++
++#if USE(SOUP2)
++        soup_session_unpause_message(static_cast<NetworkSessionSoup&>(*m_session).soupSession(), challenge.soupMessage());
++#endif
+     });
+ }
+ 
+@@ -769,7 +902,11 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
+ 
+     static const unsigned maxRedirects = 20;
+     if (m_currentRequest.redirectCount() > maxRedirects) {
++#if USE(SOUP2)
++        didFail(ResourceError::transportError(m_currentRequest.url(), SOUP_STATUS_TOO_MANY_REDIRECTS, "Too many redirects"_s));
++#else
+         didFail(ResourceError(String::fromLatin1(g_quark_to_string(SOUP_SESSION_ERROR)), SOUP_SESSION_ERROR_TOO_MANY_REDIRECTS, m_currentRequest.url(), String::fromUTF8("Too many redirects")));
++#endif
+         return;
+     }
+ 
+@@ -847,8 +984,10 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
+         auto request = newRequest;
+         if (request.url().protocolIsInHTTPFamily()) {
+             m_networkLoadMetrics.fetchStart = { };
++#if !USE(SOUP2)
+             m_networkLoadMetrics.responseEnd = { };
+             m_networkLoadMetrics.complete = false;
++#endif
+             applyAuthenticationToRequest(request);
+ 
+             if (!request.hasHTTPHeaderField(HTTPHeaderName::UserAgent))
+@@ -1022,13 +1161,16 @@ static AtomString soupHTTPVersionToString(SoupHTTPVersion version)
+         return "http/1.0"_s;
+     case SOUP_HTTP_1_1:
+         return "http/1.1"_s;
++#if SOUP_CHECK_VERSION(2, 99, 3)
+     case SOUP_HTTP_2_0:
+         return "h2"_s;
++#endif
+     }
+ 
+     return { };
+ }
+ 
++#if !USE(SOUP2)
+ static String tlsProtocolVersionToString(GTlsProtocolVersion version)
+ {
+     switch (version) {
+@@ -1052,6 +1194,7 @@ static String tlsProtocolVersionToString(GTlsProtocolVersion version)
+ 
+     return { };
+ }
++#endif
+ 
+ WebCore::AdditionalNetworkLoadMetricsForWebInspector& NetworkDataTaskSoup::additionalNetworkLoadMetricsForWebInspector()
+ {
+@@ -1060,6 +1203,15 @@ WebCore::AdditionalNetworkLoadMetricsForWebInspector& NetworkDataTaskSoup::addit
+     return *m_networkLoadMetrics.additionalNetworkLoadMetricsForWebInspector;
+ }
+ 
++#if USE(SOUP2)
++static void addHeaderSizes(const char *name, const char *value, gpointer pointer)
++{
++    uint64_t* size = static_cast<uint64_t*>(pointer);
++    // Each header is formatted as "<name>: <value>\r\n"
++    *size += strlen(name) + strlen(value) + 4;
++}
++#endif
++
+ void NetworkDataTaskSoup::didGetHeaders()
+ {
+     // We are a bit more conservative with the persistent credential storage than the session store,
+@@ -1073,6 +1225,7 @@ void NetworkDataTaskSoup::didGetHeaders()
+         m_credentialForPersistentStorage = Credential();
+     }
+ 
++#if !USE(SOUP2)
+     auto* metrics = soup_message_get_metrics(m_soupMessage.get());
+     auto responseStart = Seconds::fromMicroseconds(soup_message_metrics_get_response_start(metrics));
+     auto responseStartTime = MonotonicTime::fromRawSeconds(responseStart.seconds());
+@@ -1090,6 +1243,7 @@ void NetworkDataTaskSoup::didGetHeaders()
+     }
+ 
+     m_networkLoadMetrics.responseStart = responseStartTime;
++#endif
+ 
+     // Soup adds more headers to the request after starting signal is emitted, and got-headers
+     // is the first one we receive after starting, so we use it also to get information about the
+@@ -1107,6 +1261,7 @@ void NetworkDataTaskSoup::didGetHeaders()
+         additionalMetrics.requestHeaders = WTF::move(requestHeaders);
+ 
+         additionalMetrics.priority = toNetworkLoadPriority(soup_message_get_priority(m_soupMessage.get()));
++#if !USE(SOUP2)
+         additionalMetrics.connectionIdentifier = String::number(soup_message_get_connection_id(m_soupMessage.get()));
+         auto* address = soup_message_get_remote_address(m_soupMessage.get());
+         if (G_IS_INET_SOCKET_ADDRESS(address)) {
+@@ -1116,11 +1271,27 @@ void NetworkDataTaskSoup::didGetHeaders()
+         additionalMetrics.tlsProtocol = tlsProtocolVersionToString(soup_message_get_tls_protocol_version(m_soupMessage.get()));
+         additionalMetrics.tlsCipher = String::fromUTF8(soup_message_get_tls_ciphersuite_name(m_soupMessage.get()));
+         additionalMetrics.responseHeaderBytesReceived = soup_message_metrics_get_response_header_bytes_received(metrics);
++#else
++        {
++            auto* requestHeaders = soup_message_get_request_headers(m_soupMessage.get());
++            uint64_t requestHeadersSize = 0;
++            soup_message_headers_foreach(requestHeaders, addHeaderSizes, &requestHeadersSize);
++            additionalMetrics.requestHeaderBytesSent = requestHeadersSize;
++        }
++
++        {
++            auto* responseHeaders = soup_message_get_response_headers(m_soupMessage.get());
++            uint64_t responseHeadersSize = 0;
++            soup_message_headers_foreach(responseHeaders, addHeaderSizes, &responseHeadersSize);
++            additionalMetrics.responseHeaderBytesReceived = responseHeadersSize;
++        }
++#endif
+     }
+ 
+     m_networkLoadMetrics.protocol = soupHTTPVersionToString(soup_message_get_http_version(m_soupMessage.get()));
+ }
+ 
++#if !USE(SOUP2)
+ void NetworkDataTaskSoup::wroteHeadersCallback(SoupMessage* soupMessage, NetworkDataTaskSoup* task)
+ {
+     if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
+@@ -1176,22 +1347,35 @@ gboolean NetworkDataTaskSoup::requestCertificatePasswordCallback(SoupMessage* so
+     task->authenticate(AuthenticationChallenge(soupMessage, tlsPassword));
+     return TRUE;
+ }
++#endif
+ 
++#if USE(SOUP2)
++void NetworkDataTaskSoup::wroteBodyDataCallback(SoupMessage* soupMessage, SoupBuffer* buffer, NetworkDataTaskSoup* task)
++#else
+ void NetworkDataTaskSoup::wroteBodyDataCallback(SoupMessage* soupMessage, unsigned length, NetworkDataTaskSoup* task)
++#endif
+ {
+     if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
+         task->clearRequest();
+         return;
+     }
+     ASSERT(task->m_soupMessage.get() == soupMessage);
++#if USE(SOUP2)
++    task->didWriteBodyData(buffer->length);
++#else
+     task->didWriteBodyData(length);
++#endif
+ }
+ 
+ void NetworkDataTaskSoup::didWriteBodyData(uint64_t bytesSent)
+ {
+     RefPtr<NetworkDataTaskSoup> protectedThis(this);
+     m_bodyDataTotalBytesSent += bytesSent;
++#if USE(SOUP2)
++    m_client->didSendData(m_bodyDataTotalBytesSent, m_soupMessage->request_body->length);
++#else
+     m_client->didSendData(m_bodyDataTotalBytesSent, soup_message_headers_get_content_length(soup_message_get_request_headers(m_soupMessage.get())));
++#endif
+ }
+ 
+ void NetworkDataTaskSoup::download()
+@@ -1334,6 +1518,62 @@ void NetworkDataTaskSoup::didFail(const ResourceError& error)
+     dispatchDidCompleteWithError(error);
+ }
+ 
++#if USE(SOUP2)
++void NetworkDataTaskSoup::networkEventCallback(SoupMessage* soupMessage, GSocketClientEvent event, GIOStream* stream, NetworkDataTaskSoup* task)
++{
++    if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client)
++        return;
++
++    ASSERT(task->m_soupMessage.get() == soupMessage);
++    task->networkEvent(event, stream);
++}
++
++void NetworkDataTaskSoup::networkEvent(GSocketClientEvent event, GIOStream* stream)
++{
++    auto time = MonotonicTime::now();
++    switch (event) {
++    case G_SOCKET_CLIENT_RESOLVING:
++        m_networkLoadMetrics.domainLookupStart = time;
++        break;
++    case G_SOCKET_CLIENT_RESOLVED:
++        m_networkLoadMetrics.domainLookupEnd = time;
++        break;
++    case G_SOCKET_CLIENT_CONNECTING:
++        m_networkLoadMetrics.connectStart = time;
++        break;
++    case G_SOCKET_CLIENT_CONNECTED:
++        if (shouldCaptureExtraNetworkLoadMetrics() && G_IS_SOCKET_CONNECTION(stream)) {
++            GRefPtr<GSocketAddress> address = adoptGRef(g_socket_connection_get_remote_address(G_SOCKET_CONNECTION(stream), nullptr));
++            if (G_IS_INET_SOCKET_ADDRESS(address.get())) {
++                GUniquePtr<char> ipAddress(g_inet_address_to_string(g_inet_socket_address_get_address(G_INET_SOCKET_ADDRESS(address.get()))));
++                additionalNetworkLoadMetricsForWebInspector().remoteAddress = makeString(unsafeSpan(ipAddress.get()), ':', g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(address.get())));
++            }
++        }
++        // Web Timing considers that connection time involves dns, proxy & TLS negotiation...
++        // so we better pick G_SOCKET_CLIENT_COMPLETE for connectEnd.
++        break;
++    case G_SOCKET_CLIENT_PROXY_NEGOTIATING:
++        break;
++    case G_SOCKET_CLIENT_PROXY_NEGOTIATED:
++        break;
++    case G_SOCKET_CLIENT_TLS_HANDSHAKING:
++        m_networkLoadMetrics.secureConnectionStart = time;
++        RELEASE_ASSERT(G_IS_TLS_CONNECTION(stream));
++        g_object_set_data(G_OBJECT(stream), "wk-soup-message", m_soupMessage.get());
++        g_signal_connect(stream, "accept-certificate", G_CALLBACK(tlsConnectionAcceptCertificateCallback), this);
++        break;
++    case G_SOCKET_CLIENT_TLS_HANDSHAKED:
++        break;
++    case G_SOCKET_CLIENT_COMPLETE:
++        m_networkLoadMetrics.connectEnd = time;
++        break;
++    default:
++        ASSERT_NOT_REACHED();
++        break;
++    }
++}
++#endif
++
+ void NetworkDataTaskSoup::startingCallback(SoupMessage* soupMessage, NetworkDataTaskSoup* task)
+ {
+     if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client)
+@@ -1343,6 +1583,8 @@ void NetworkDataTaskSoup::startingCallback(SoupMessage* soupMessage, NetworkData
+     task->didStartRequest();
+ }
+ 
++#if SOUP_CHECK_VERSION(2, 67, 1)
++
+ bool NetworkDataTaskSoup::shouldAllowHSTSPolicySetting() const
+ {
+     // Follow Apple's HSTS abuse mitigation 1:
+@@ -1366,7 +1608,11 @@ void NetworkDataTaskSoup::protocolUpgradedViaHSTS(SoupMessage* soupMessage)
+     continueHTTPRedirection();
+ }
+ 
++#if USE(SOUP2)
++void NetworkDataTaskSoup::hstsEnforced(SoupHSTSEnforcer*, SoupMessage* soupMessage, NetworkDataTaskSoup* task)
++#else
+ void NetworkDataTaskSoup::hstsEnforced(SoupMessage* soupMessage, NetworkDataTaskSoup* task)
++#endif
+ {
+     if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
+         task->clearRequest();
+@@ -1377,8 +1623,15 @@ void NetworkDataTaskSoup::hstsEnforced(SoupMessage* soupMessage, NetworkDataTask
+         task->protocolUpgradedViaHSTS(soupMessage);
+ }
+ 
++#endif
++
+ void NetworkDataTaskSoup::didStartRequest()
+ {
++#if USE(SOUP2)
++    m_networkLoadMetrics.requestStart = MonotonicTime::now();
++    if (!m_networkLoadMetrics.secureConnectionStart && m_currentRequest.url().protocolIs("https"_s))
++        m_networkLoadMetrics.secureConnectionStart = WebCore::reusedTLSConnectionSentinel;
++#else
+     auto* metrics = soup_message_get_metrics(m_soupMessage.get());
+     auto domainLookupStart = Seconds::fromMicroseconds(soup_message_metrics_get_dns_start(metrics));
+     auto domainLookupEnd = Seconds::fromMicroseconds(soup_message_metrics_get_dns_end(metrics));
+@@ -1396,6 +1649,7 @@ void NetworkDataTaskSoup::didStartRequest()
+     else
+         m_networkLoadMetrics.secureConnectionStart = MonotonicTime::fromRawSeconds(secureConnectionStart.seconds());
+     m_networkLoadMetrics.requestStart = MonotonicTime::fromRawSeconds(requestStart.seconds());
++#endif
+ }
+ 
+ void NetworkDataTaskSoup::restartedCallback(SoupMessage* soupMessage, NetworkDataTaskSoup* task)
+@@ -1412,9 +1666,13 @@ void NetworkDataTaskSoup::restartedCallback(SoupMessage* soupMessage, NetworkDat
+ void NetworkDataTaskSoup::didRestart()
+ {
+     m_networkLoadMetrics = NetworkLoadMetrics::emptyMetrics();
++#if USE(SOUP2)
++    m_networkLoadMetrics.fetchStart = MonotonicTime::now();
++#else
+     auto* metrics = soup_message_get_metrics(m_soupMessage.get());
+     m_networkLoadMetrics.fetchStart = MonotonicTime::fromRawSeconds(Seconds::fromMicroseconds(soup_message_metrics_get_fetch_start(metrics)).seconds());
+     m_currentRequest.updateSoupMessageBody(m_soupMessage.get(), m_session->blobRegistry());
++#endif
+     m_networkLoadMetrics.redirectStart = m_networkLoadMetrics.fetchStart;
+ }
+ 
+diff --git a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.h b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.h
+index d88360a343c0..3f20fc786cd1 100644
+--- a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.h
++++ b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.h
+@@ -79,9 +79,15 @@ private:
+     void dispatchDidReceiveResponse();
+     void dispatchDidCompleteWithError(const WebCore::ResourceError&);
+ 
++#if !USE(SOUP2)
+     static void preconnectCallback(SoupSession*, GAsyncResult*, NetworkDataTaskSoup*);
++#endif
+ 
++#if USE(SOUP2)
++    static gboolean tlsConnectionAcceptCertificateCallback(GTlsConnection*, GTlsCertificate*, GTlsCertificateFlags, NetworkDataTaskSoup*);
++#else
+     static gboolean acceptCertificateCallback(SoupMessage*, GTlsCertificate*, GTlsCertificateFlags, NetworkDataTaskSoup*);
++#endif
+     bool acceptCertificate(GTlsCertificate*, GTlsCertificateFlags);
+ 
+     static void didSniffContentCallback(SoupMessage*, const char* contentType, GHashTable* parameters, NetworkDataTaskSoup*);
+@@ -89,7 +95,11 @@ private:
+ 
+     bool persistentCredentialStorageEnabled() const;
+     void applyAuthenticationToRequest(WebCore::ResourceRequest&);
++#if USE(SOUP2)
++    static void authenticateCallback(SoupSession*, SoupMessage*, SoupAuth*, gboolean retrying, NetworkDataTaskSoup*);
++#else
+     static gboolean authenticateCallback(SoupMessage*, SoupAuth*, gboolean retrying, NetworkDataTaskSoup*);
++#endif
+     void authenticate(WebCore::AuthenticationChallenge&&);
+     void continueAuthenticate(WebCore::AuthenticationChallenge&&);
+     void completeAuthentication(const WebCore::AuthenticationChallenge&, const WebCore::Credential&);
+@@ -114,14 +124,20 @@ private:
+     static void gotHeadersCallback(SoupMessage*, NetworkDataTaskSoup*);
+     void didGetHeaders();
+ 
++#if USE(SOUP2)
++    static void wroteBodyDataCallback(SoupMessage*, SoupBuffer*, NetworkDataTaskSoup*);
++#else
+     static void wroteBodyDataCallback(SoupMessage*, unsigned, NetworkDataTaskSoup*);
++#endif
+     void didWriteBodyData(uint64_t bytesSent);
+ 
++#if !USE(SOUP2)
+     static void wroteHeadersCallback(SoupMessage*, NetworkDataTaskSoup*);
+     static void wroteBodyCallback(SoupMessage*, NetworkDataTaskSoup*);
+     static void gotBodyCallback(SoupMessage*, NetworkDataTaskSoup*);
+     static gboolean requestCertificateCallback(SoupMessage*, GTlsClientConnection*, NetworkDataTaskSoup*);
+     static gboolean requestCertificatePasswordCallback(SoupMessage*, GTlsPassword*, NetworkDataTaskSoup*);
++#endif
+ 
+     void download();
+     static void writeDownloadCallback(GOutputStream*, GAsyncResult*, NetworkDataTaskSoup*);
+@@ -133,11 +149,26 @@ private:
+ 
+     void didFail(const WebCore::ResourceError&);
+ 
++#if USE(SOUP2)
++    static void networkEventCallback(SoupMessage*, GSocketClientEvent, GIOStream*, NetworkDataTaskSoup*);
++    void networkEvent(GSocketClientEvent, GIOStream*);
++#endif
++
++#if SOUP_CHECK_VERSION(2, 49, 91)
+     static void startingCallback(SoupMessage*, NetworkDataTaskSoup*);
++#else
++    static void requestStartedCallback(SoupSession*, SoupMessage*, SoupSocket*, NetworkDataTaskSoup*);
++#endif
++#if SOUP_CHECK_VERSION(2, 67, 1)
+     bool shouldAllowHSTSPolicySetting() const;
+     bool shouldAllowHSTSProtocolUpgrade() const;
+     void protocolUpgradedViaHSTS(SoupMessage*);
++#if USE(SOUP2)
++    static void hstsEnforced(SoupHSTSEnforcer*, SoupMessage*, NetworkDataTaskSoup*);
++#else
+     static void hstsEnforced(SoupMessage*, NetworkDataTaskSoup*);
++#endif
++#endif
+     void didStartRequest();
+     static void restartedCallback(SoupMessage*, NetworkDataTaskSoup*);
+     void didRestart();
+diff --git a/Source/WebKit/NetworkProcess/soup/NetworkSessionSoup.cpp b/Source/WebKit/NetworkProcess/soup/NetworkSessionSoup.cpp
+index fffd039135be..4b9cc36b7f65 100644
+--- a/Source/WebKit/NetworkProcess/soup/NetworkSessionSoup.cpp
++++ b/Source/WebKit/NetworkProcess/soup/NetworkSessionSoup.cpp
+@@ -95,9 +95,31 @@ void NetworkSessionSoup::setCookiePersistentStorage(const String& storagePath, S
+ 
+ void NetworkSessionSoup::clearCredentials(WallTime)
+ {
++#if SOUP_CHECK_VERSION(2, 57, 1)
+     soup_auth_manager_clear_cached_credentials(SOUP_AUTH_MANAGER(soup_session_get_feature(soupSession(), SOUP_TYPE_AUTH_MANAGER)));
++#endif
+ }
+ 
++#if USE(SOUP2)
++static gboolean webSocketAcceptCertificateCallback(GTlsConnection* connection, GTlsCertificate* certificate, GTlsCertificateFlags errors, NetworkSessionSoup* session)
++{
++    if (DeprecatedGlobalSettings::allowsAnySSLCertificate())
++        return TRUE;
++
++    auto* soupMessage = static_cast<SoupMessage*>(g_object_get_data(G_OBJECT(connection), "wk-soup-message"));
++    return !session->soupNetworkSession().checkTLSErrors(soupURIToURL(soup_message_get_uri(soupMessage)), certificate, errors);
++}
++
++static void webSocketMessageNetworkEventCallback(SoupMessage* soupMessage, GSocketClientEvent event, GIOStream* connection, NetworkSessionSoup* session)
++{
++    if (event != G_SOCKET_CLIENT_TLS_HANDSHAKING)
++        return;
++
++    g_object_set_data(G_OBJECT(connection), "wk-soup-message", soupMessage);
++    g_signal_connect(connection, "accept-certificate", G_CALLBACK(webSocketAcceptCertificateCallback), session);
++}
++#endif
++
+ RefPtr<WebSocketTask> NetworkSessionSoup::createWebSocketTask(WebPageProxyIdentifier webPageProxyID, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, NetworkSocketChannel& channel, const ResourceRequest& request, const String& protocol, const ClientOrigin&, bool, bool, OptionSet<WebCore::AdvancedPrivacyProtections>, StoredCredentialsPolicy)
+ {
+     GRefPtr<SoupMessage> soupMessage = request.createSoupMessage(blobRegistry());
+@@ -105,12 +127,16 @@ RefPtr<WebSocketTask> NetworkSessionSoup::createWebSocketTask(WebPageProxyIdenti
+         return nullptr;
+ 
+     if (request.url().protocolIs("wss"_s)) {
++#if USE(SOUP2)
++        g_signal_connect(soupMessage.get(), "network-event", G_CALLBACK(webSocketMessageNetworkEventCallback), this);
++#else
+         g_signal_connect(soupMessage.get(), "accept-certificate", G_CALLBACK(+[](SoupMessage* message, GTlsCertificate* certificate, GTlsCertificateFlags errors,  NetworkSessionSoup* session) -> gboolean {
+             if (DeprecatedGlobalSettings::allowsAnySSLCertificate())
+                 return TRUE;
+ 
+             return !session->soupNetworkSession().checkTLSErrors(soup_message_get_uri(message), certificate, errors);
+         }), this);
++#endif
+     }
+ 
+     bool shouldBlockCookies = checkedNetworkStorageSession()->shouldBlockCookies(request, frameID, pageID, networkProcess().shouldRelaxThirdPartyCookieBlockingForPage(webPageProxyID), WebCore::IsKnownCrossSiteTracker::No);
+diff --git a/Source/WebKit/NetworkProcess/soup/WebSocketTaskSoup.cpp b/Source/WebKit/NetworkProcess/soup/WebSocketTaskSoup.cpp
+index 667a9ab1a197..8917771f4e55 100644
+--- a/Source/WebKit/NetworkProcess/soup/WebSocketTaskSoup.cpp
++++ b/Source/WebKit/NetworkProcess/soup/WebSocketTaskSoup.cpp
+@@ -33,6 +33,7 @@
+ #include <WebCore/HTTPParsers.h>
+ #include <WebCore/ResourceRequest.h>
+ #include <WebCore/ResourceResponse.h>
++#include <WebCore/SoupVersioning.h>
+ #include <WebCore/ThreadableWebSocketChannel.h>
+ #include <wtf/RunLoop.h>
+ #include <wtf/TZoneMallocInlines.h>
+@@ -43,10 +44,17 @@
+ 
+ namespace WebKit {
+ 
+-static inline bool isConnectionError(GError* error)
++static inline bool isConnectionError(GError* error, SoupMessage* message)
+ {
++#if USE(SOUP2)
++    return g_error_matches(error, SOUP_WEBSOCKET_ERROR, SOUP_WEBSOCKET_ERROR_NOT_WEBSOCKET)
++        && message
++        && (message->status_code == SOUP_STATUS_CANT_CONNECT || message->status_code == SOUP_STATUS_CANT_CONNECT_PROXY);
++#else
++    UNUSED_PARAM(message);
+     // If not a SOUP_WEBSOCKET_ERROR_NOT_WEBSOCKET, then it's a connection error.
+     return error && !g_error_matches(error, SOUP_WEBSOCKET_ERROR, SOUP_WEBSOCKET_ERROR_NOT_WEBSOCKET);
++#endif
+ }
+ 
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(WebSocketTask);
+@@ -73,6 +81,12 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, const WebCore::Resou
+             protocolsSpan[i++] = g_strdup(subprotocol.trim(isASCIIWhitespaceWithoutFF<char16_t>).utf8().data());
+     }
+ 
++#if USE(SOUP2)
++    // Ensure a new connection is used for WebSockets.
++    // FIXME: this is done by libsoup since 2.69.1 and 2.68.4, so it can be removed when bumping the libsoup requirement.
++    // See https://bugs.webkit.org/show_bug.cgi?id=203404
++    soup_message_set_flags(msg, static_cast<SoupMessageFlags>(soup_message_get_flags(msg) | SOUP_MESSAGE_NEW_CONNECTION));
++#else
+     {
+         // No need to subscribe to the "request-certificate" signal, just set the client certificate upfront.
+         auto protectionSpace = WebCore::AuthenticationChallenge::protectionSpaceForClientCertificate(WebCore::soupURIToURL(soup_message_get_uri(msg)));
+@@ -87,6 +101,7 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, const WebCore::Resou
+         soup_message_tls_client_certificate_password_request_complete(msg);
+         return TRUE;
+     }), this);
++#endif
+ 
+     soup_session_websocket_connect_async(session, msg, nullptr, protocols.get(), RunLoopSourcePriority::AsyncIONetwork, m_cancellable.get(),
+         [] (GObject* session, GAsyncResult* result, gpointer userData) {
+@@ -95,7 +110,7 @@ WebSocketTask::WebSocketTask(NetworkSocketChannel& channel, const WebCore::Resou
+             if (g_error_matches(error.get(), G_IO_ERROR, G_IO_ERROR_CANCELLED))
+                 return;
+             auto* task = static_cast<WebSocketTask*>(userData);
+-            if (isConnectionError(error.get())) {
++            if (isConnectionError(error.get(), task->m_handshakeMessage.get())) {
+                 task->m_delayErrorMessage = String::fromUTF8(error->message);
+                 task->m_delayFailTimer.startOneShot(NetworkProcess::randomClosedPortDelay());
+                 return;
+@@ -127,6 +142,7 @@ RefPtr<NetworkSocketChannel> WebSocketTask::protectedChannel() const
+ 
+ String WebSocketTask::acceptedExtensions() const
+ {
++#if SOUP_CHECK_VERSION(2, 67, 90)
+     StringBuilder result;
+     GList* extensions = soup_websocket_connection_get_extensions(m_connection.get());
+     for (auto* it = extensions; it; it = g_list_next(it)) {
+@@ -141,15 +157,20 @@ String WebSocketTask::acceptedExtensions() const
+             result.append(String::fromUTF8(params.get()));
+     }
+     return result.toStringPreserveCapacity();
++#else
++    return { };
++#endif
+ }
+ 
+ void WebSocketTask::didConnect(GRefPtr<SoupWebsocketConnection>&& connection)
+ {
+     m_connection = WTF::move(connection);
+ 
++#if SOUP_CHECK_VERSION(2, 56, 0)
+     // Use the same maximum payload length as WebKit internal implementation for backwards compatibility.
+     static const uint64_t maxPayloadLength = UINT64_C(0x7FFFFFFFFFFFFFFF);
+     soup_websocket_connection_set_max_incoming_payload_size(m_connection.get(), maxPayloadLength);
++#endif
+ 
+     g_signal_connect_swapped(m_connection.get(), "message", reinterpret_cast<GCallback>(didReceiveMessageCallback), this);
+     g_signal_connect_swapped(m_connection.get(), "error", reinterpret_cast<GCallback>(didReceiveErrorCallback), this);
+@@ -234,9 +255,13 @@ void WebSocketTask::didClose(unsigned short code, const String& reason)
+ void WebSocketTask::sendString(std::span<const uint8_t> utf8, CompletionHandler<void()>&& callback)
+ {
+     if (m_connection && soup_websocket_connection_get_state(m_connection.get()) == SOUP_WEBSOCKET_STATE_OPEN) {
++#if SOUP_CHECK_VERSION(2, 67, 3)
+         // Soup is going to copy the data immediately, so we can use g_bytes_new_static() here to avoid more data copies.
+         GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new_static(utf8.data(), utf8.size()));
+         soup_websocket_connection_send_message(m_connection.get(), SOUP_WEBSOCKET_DATA_TEXT, bytes.get());
++#else
++        soup_websocket_connection_send_text(m_connection.get(), CString(utf8).data());
++#endif
+     }
+     callback();
+ }
+@@ -259,8 +284,10 @@ void WebSocketTask::close(int32_t code, const String& reason)
+         return;
+     }
+ 
++#if SOUP_CHECK_VERSION(2, 67, 90)
+     if (code == WebCore::ThreadableWebSocketChannel::CloseEventCodeNotSpecified)
+         code = SOUP_WEBSOCKET_CLOSE_NO_STATUS;
++#endif
+ 
+     if (soup_websocket_connection_get_state(m_connection.get()) == SOUP_WEBSOCKET_STATE_OPEN)
+         soup_websocket_connection_close(m_connection.get(), code, reason.utf8().data());
+diff --git a/Source/WebKit/PlatformGTK.cmake b/Source/WebKit/PlatformGTK.cmake
+index 9c2217af158e..47ffc9626f0d 100644
+--- a/Source/WebKit/PlatformGTK.cmake
++++ b/Source/WebKit/PlatformGTK.cmake
+@@ -615,7 +615,7 @@ GI_INTROSPECT(WebKit${WEBKITGTK_API_INFIX} ${WEBKITGTK_API_VERSION} webkit${WEBK
+     DEPENDENCIES
+         JavaScriptCore
+         Gtk-${GTK_API_VERSION}.0:${GTK_PKGCONFIG_PACKAGE}
+-        Soup-3.0:libsoup-3.0
++        Soup-${SOUP_API_VERSION}:libsoup-${SOUP_API_VERSION}
+     SOURCES
+         ${WebKitGTK_INSTALLED_HEADERS}
+         ${WEBKITGTK_SOURCES_FOR_INTROSPECTION}
+@@ -651,7 +651,7 @@ GI_INTROSPECT(${WEBKITGTK_WEB_PROCESS_EXTENSION_API_NAME} ${WEBKITGTK_API_VERSIO
+     DEPENDENCIES
+         JavaScriptCore
+         Gtk-${GTK_API_VERSION}.0:${GTK_PKGCONFIG_PACKAGE}
+-        Soup-3.0:libsoup-3.0
++        Soup-${SOUP_API_VERSION}:libsoup-${SOUP_API_VERSION}
+     SOURCES
+         ${WebKitDOM_SOURCES_FOR_INTROSPECTION}
+         ${WebKitWebProcessExtension_INSTALLED_HEADERS}
+diff --git a/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp b/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
+index 75b2e7373b5d..601f58788871 100644
+--- a/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
++++ b/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
+@@ -29,6 +29,7 @@
+ #if ENABLE(REMOTE_INSPECTOR)
+ 
+ #include "RemoteInspectorClient.h"
++#include <WebCore/SoupVersioning.h>
+ #include <wtf/FileSystem.h>
+ #include <wtf/URL.h>
+ #include <wtf/glib/GSpanExtras.h>
+@@ -56,14 +57,22 @@ bool RemoteInspectorHTTPServer::start(GRefPtr<GSocketAddress>&& socketAddress, u
+     }
+ 
+     soup_server_add_handler(m_server.get(), nullptr,
++#if USE(SOUP2)
++        [](SoupServer*, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer userData) {
++#else
+         [](SoupServer*, SoupServerMessage* message, const char* path, GHashTable*, gpointer userData) {
++#endif
+             auto& httpServer = *static_cast<RemoteInspectorHTTPServer*>(userData);
+             auto status = httpServer.handleRequest(path, soup_server_message_get_response_headers(message), soup_server_message_get_response_body(message));
+             soup_server_message_set_status(message, status, nullptr);
+         }, this, nullptr);
+ 
+     soup_server_add_websocket_handler(m_server.get(), "/socket", nullptr, nullptr,
++#if USE(SOUP2)
++        [](SoupServer*, SoupWebsocketConnection* connection, const char* path, SoupClientContext*, gpointer userData) {
++#else
+         [](SoupServer*, SoupServerMessage*, const char* path, SoupWebsocketConnection* connection, gpointer userData) {
++#endif
+             auto& httpServer = *static_cast<RemoteInspectorHTTPServer*>(userData);
+             httpServer.handleWebSocket(path, connection);
+         }, this, nullptr);
+@@ -146,8 +155,12 @@ void RemoteInspectorHTTPServer::sendMessageToFrontend(uint64_t connectionID, uin
+ 
+     auto utf8 = message.utf8();
+     // Soup is going to copy the data immediately, so we can use g_bytes_new_static() here to avoid more data copies.
++#if SOUP_CHECK_VERSION(2, 67, 3)
+     GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new_static(utf8.data(), utf8.length()));
+     soup_websocket_connection_send_message(webSocketConnection, SOUP_WEBSOCKET_DATA_TEXT, bytes.get());
++#else
++    soup_websocket_connection_send_text(webSocketConnection, CString(utf8).data());
++#endif
+ }
+ 
+ void RemoteInspectorHTTPServer::targetDidClose(uint64_t connectionID, uint64_t targetID)
+diff --git a/Source/WebKit/gtk/webkitgtk-web-process-extension.pc.in b/Source/WebKit/gtk/webkitgtk-web-process-extension.pc.in
+index f1d7cabb175f..9d066b5f484f 100644
+--- a/Source/WebKit/gtk/webkitgtk-web-process-extension.pc.in
++++ b/Source/WebKit/gtk/webkitgtk-web-process-extension.pc.in
+@@ -8,6 +8,6 @@ Name: WebKitGTK web process extensions
+ Description: Web content engine for GTK - web process extensions
+ URL: https://webkitgtk.org
+ Version: @PROJECT_VERSION@
+-Requires: glib-2.0 @GTK_PC_NAME@ libsoup-3.0 javascriptcoregtk-@WEBKITGTK_API_VERSION@
++Requires: glib-2.0 @GTK_PC_NAME@ libsoup-2.4 javascriptcoregtk-@WEBKITGTK_API_VERSION@
+ Libs: -L${libdir} -lwebkit@WEBKITGTK_API_INFIX@gtk-@WEBKITGTK_API_VERSION@
+ Cflags: -I${includedir}/webkitgtk-@WEBKITGTK_API_VERSION@
+diff --git a/Source/WebKit/gtk/webkitgtk.pc.in b/Source/WebKit/gtk/webkitgtk.pc.in
+index db0fb001f327..8d7c3e9d086d 100644
+--- a/Source/WebKit/gtk/webkitgtk.pc.in
++++ b/Source/WebKit/gtk/webkitgtk.pc.in
+@@ -8,6 +8,6 @@ Name: WebKitGTK
+ Description: Web content engine for GTK
+ URL: https://webkitgtk.org
+ Version: @PROJECT_VERSION@
+-Requires: glib-2.0 @GTK_PC_NAME@ libsoup-3.0 javascriptcoregtk-@WEBKITGTK_API_VERSION@
++Requires: glib-2.0 @GTK_PC_NAME@ libsoup-2.4 javascriptcoregtk-@WEBKITGTK_API_VERSION@
+ Libs: -L${libdir} -lwebkit@WEBKITGTK_API_INFIX@gtk-@WEBKITGTK_API_VERSION@
+ Cflags: -I${includedir}/webkitgtk-@WEBKITGTK_API_VERSION@
+diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
+index 6d5f17debcc7..a856d1ffd945 100644
+--- a/Source/cmake/OptionsGTK.cmake
++++ b/Source/cmake/OptionsGTK.cmake
+@@ -11,7 +11,6 @@ set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
+ find_package(GLib 2.56.0 REQUIRED COMPONENTS GioUnix Thread Module)
+ find_package(Cairo 1.14.0 REQUIRED)
+ find_package(LibGcrypt 1.7.0 REQUIRED)
+-find_package(Soup3 3.0.0 REQUIRED)
+ find_package(Tasn1 REQUIRED)
+ find_package(HarfBuzz 1.7.5 REQUIRED COMPONENTS ICU)
+ find_package(ICU 70.1 REQUIRED COMPONENTS data i18n uc)
+@@ -58,6 +57,7 @@ WEBKIT_OPTION_DEFINE(USE_LIBDRM "Whether to enable usage of libdrm." PUBLIC ON)
+ WEBKIT_OPTION_DEFINE(USE_LIBHYPHEN "Whether to enable the default automatic hyphenation implementation." PUBLIC ON)
+ WEBKIT_OPTION_DEFINE(USE_LIBSECRET "Whether to enable the persistent credential storage using libsecret." PUBLIC ON)
+ WEBKIT_OPTION_DEFINE(USE_SKIA_OPENTYPE_SVG "Whether to use the Skia built-in support for OpenType SVG fonts." PUBLIC ON)
++WEBKIT_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC OFF)
+ WEBKIT_OPTION_DEFINE(USE_SYSTEM_SYSPROF_CAPTURE "Whether to use a system-provided libsysprof-capture" PUBLIC ON)
+ WEBKIT_OPTION_DEFINE(ENABLE_JSC_RESTRICTED_OPTIONS_BY_DEFAULT "Whether to enable dangerous development options in JSC by default." PRIVATE OFF)
+ 
+@@ -65,6 +65,8 @@ WEBKIT_OPTION_DEPEND(ENABLE_DOCUMENTATION ENABLE_INTROSPECTION)
+ WEBKIT_OPTION_DEPEND(USE_GBM USE_LIBDRM)
+ WEBKIT_OPTION_DEPEND(USE_SKIA_OPENTYPE_SVG USE_SKIA)
+ 
++WEBKIT_OPTION_CONFLICT(USE_GTK4 USE_SOUP2)
++
+ # Private options specific to the GTK port. Changing these options is
+ # completely unsupported. They are intended for use only by WebKit developers.
+ WEBKIT_OPTION_DEFINE(USE_SPIEL "Whether to enable usage of LibSpiel for speech synthesis." PRIVATE OFF)
+@@ -181,10 +183,32 @@ if (ENABLE_WAYLAND_TARGET AND NOT ${GTK_SUPPORTS_WAYLAND})
+     set(ENABLE_WAYLAND_TARGET OFF)
+ endif ()
+ 
++if (USE_SOUP2)
++    set(SOUP_MINIMUM_VERSION 2.54.0)
++    set(SOUP_API_VERSION 2.4)
++else ()
++    set(SOUP_MINIMUM_VERSION 3.0.0)
++    set(SOUP_API_VERSION 3.0)
++    set(ENABLE_SERVER_PRECONNECT ON)
++endif ()
++find_package(LibSoup ${SOUP_MINIMUM_VERSION})
++
++if (NOT LibSoup_FOUND)
++if (USE_SOUP2)
++    message(FATAL_ERROR "libsoup is required.")
++else ()
++    message(FATAL_ERROR "libsoup 3 is required. Enable USE_SOUP2 to use libsoup 2 (disables HTTP/2)")
++endif ()
++endif ()
++
+ if (USE_GTK4)
+     set(WEBKITGTK_API_INFIX "")
+     set(WEBKITGTK_API_VERSION "6.0")
+     SET_AND_EXPOSE_TO_BUILD(ENABLE_2022_GLIB_API ON)
++elseif (USE_SOUP2)
++    set(WEBKITGTK_API_INFIX "2")
++    set(WEBKITGTK_API_VERSION "4.0")
++    SET_AND_EXPOSE_TO_BUILD(ENABLE_2022_GLIB_API OFF)
+ else ()
+     set(WEBKITGTK_API_INFIX "2")
+     set(WEBKITGTK_API_VERSION "4.1")
+@@ -201,9 +225,12 @@ find_package(GLIB ${GLIB_MINIMUM_VERSION} REQUIRED COMPONENTS gio gio-unix gobje
+ EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_INFIX)
+ EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_VERSION)
+ 
+-if (WEBKITGTK_API_VERSION VERSION_EQUAL "4.1")
+-    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 21 7 21)
+-    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 10 11 10)
++if (WEBKITGTK_API_VERSION VERSION_EQUAL "4.0")
++    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 112 0 75)
++    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 47 0 29)
++elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "4.1")
++    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 20 0 20)
++    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 10 0 10)
+ elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "6.0")
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 20 7 16)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 8 11 7)
+diff --git a/Source/cmake/WebKitFeatures.cmake b/Source/cmake/WebKitFeatures.cmake
+index d4046bf679b2..821eed4b9eaf 100644
+--- a/Source/cmake/WebKitFeatures.cmake
++++ b/Source/cmake/WebKitFeatures.cmake
+@@ -212,6 +212,7 @@ macro(WEBKIT_OPTION_BEGIN)
+     WEBKIT_OPTION_DEFINE(ENABLE_RESOURCE_USAGE "Toggle resource usage support" PRIVATE OFF)
+     WEBKIT_OPTION_DEFINE(ENABLE_SAMPLING_PROFILER "Toggle sampling profiler support" PRIVATE ${ENABLE_SAMPLING_PROFILER_DEFAULT})
+     WEBKIT_OPTION_DEFINE(ENABLE_SANDBOX_EXTENSIONS "Toggle sandbox extensions support" PRIVATE OFF)
++    WEBKIT_OPTION_DEFINE(ENABLE_SERVER_PRECONNECT "Toggle server preconnect support" PRIVATE OFF)
+     WEBKIT_OPTION_DEFINE(ENABLE_SERVICE_CONTROLS "Toggle service controls support" PRIVATE OFF)
+     WEBKIT_OPTION_DEFINE(ENABLE_SHAREABLE_RESOURCE "Toggle network shareable resources support" PRIVATE OFF)
+     WEBKIT_OPTION_DEFINE(ENABLE_SMOOTH_SCROLLING "Toggle smooth scrolling" PRIVATE ON)
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp
+index 10bcc6bab0ea..1e04128918ae 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp
+@@ -20,6 +20,7 @@
+ #include "config.h"
+ #include "LoadTrackingTest.h"
+ #include "WebKitTestServer.h"
++#include <WebCore/SoupVersioning.h>
+ #include <wtf/glib/GRefPtr.h>
+ 
+ static WebKitTestServer* kServer;
+@@ -347,7 +348,11 @@ static void testWebViewAuthenticationEmptyRealm(AuthenticationTest* test, gconst
+ class Tunnel {
+     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Tunnel);
+ public:
++#if USE(SOUP2)
++    Tunnel(SoupServer* server, SoupMessage* message)
++#else
+     Tunnel(SoupServer* server, SoupServerMessage* message)
++#endif
+         : m_server(server)
+         , m_message(message)
+     {
+@@ -364,8 +369,13 @@ public:
+         m_completionHandler = WTF::move(completionHandler);
+         GRefPtr<GSocketClient> client = adoptGRef(g_socket_client_new());
+         auto* uri = soup_server_message_get_uri(m_message.get());
++#if USE(SOUP2)
++        const char* host = uri->host;
++        int port = uri->port;
++#else
+         const char* host = g_uri_get_host(uri);
+         int port = std::max<int>(g_uri_get_port(uri), 0);
++#endif
+         g_socket_client_connect_to_host_async(client.get(), host, port, nullptr, [](GObject* source, GAsyncResult* result, gpointer userData) {
+             auto* tunnel = static_cast<Tunnel*>(userData);
+             GUniqueOutPtr<GError> error;
+@@ -381,15 +391,28 @@ public:
+     }
+ 
+     GRefPtr<SoupServer> m_server;
++#if USE(SOUP2)
++    GRefPtr<SoupMessage> m_message;
++#else
+     GRefPtr<SoupServerMessage> m_message;
++#endif
+     Function<void (const char*)> m_completionHandler;
+ };
+ 
+ unsigned gProxyServerPort;
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext* context, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
++#if USE(SOUP2)
++    unsigned port = g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(soup_client_context_get_local_address(context)));
++#else
+     unsigned port = g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(soup_server_message_get_local_address(message)));
++#endif
++
+     if (soup_server_message_get_method(message) == SOUP_METHOD_CONNECT) {
+         g_assert_cmpuint(port, ==, gProxyServerPort);
+         auto tunnel = makeUnique<Tunnel>(server, message);
+@@ -482,8 +505,14 @@ static void testWebViewAuthenticationProxy(ProxyAuthenticationTest* test, gconst
+ {
+     test->loadURI(kServer->getURIForPath("/proxy/auth-test.html").data());
+     WebKitAuthenticationRequest* request = test->waitForAuthenticationRequest();
++#if USE(SOUP2)
++    // FIXME: the uri and host should the proxy ones, not the requested ones.
++    ASSERT_CMP_CSTRING(webkit_authentication_request_get_host(request), ==, kServer->baseURL().host().toString().utf8());
++    g_assert_cmpuint(webkit_authentication_request_get_port(request), ==, kServer->port());
++#else
+     ASSERT_CMP_CSTRING(webkit_authentication_request_get_host(request), ==, test->m_proxyServer.baseURL().host().toString().utf8());
+     g_assert_cmpuint(webkit_authentication_request_get_port(request), ==, test->m_proxyServer.port());
++#endif
+     g_assert_cmpstr(webkit_authentication_request_get_realm(request), ==, "Proxy realm");
+     g_assert_cmpint(webkit_authentication_request_get_scheme(request), ==, WEBKIT_AUTHENTICATION_SCHEME_HTTP_BASIC);
+     g_assert_true(webkit_authentication_request_is_for_proxy(request));
+@@ -491,8 +520,13 @@ static void testWebViewAuthenticationProxy(ProxyAuthenticationTest* test, gconst
+     auto* origin = webkit_authentication_request_get_security_origin(request);
+     g_assert_nonnull(origin);
+     ASSERT_CMP_CSTRING(webkit_security_origin_get_protocol(origin), ==, kServer->baseURL().protocol().toString().utf8());
++#if USE(SOUP2)
++    ASSERT_CMP_CSTRING(webkit_security_origin_get_host(origin), ==, kServer->baseURL().host().toString().utf8());
++    g_assert_cmpuint(webkit_security_origin_get_port(origin), ==, kServer->port());
++#else
+     ASSERT_CMP_CSTRING(webkit_security_origin_get_host(origin), ==, test->m_proxyServer.baseURL().host().toString().utf8());
+     g_assert_cmpuint(webkit_security_origin_get_port(origin), ==, test->m_proxyServer.port());
++#endif
+     webkit_security_origin_unref(origin);
+ }
+ 
+@@ -503,8 +537,14 @@ static void testWebViewAuthenticationProxyHTTPS(ProxyAuthenticationTest* test, g
+ 
+     test->loadURI(httpsServer->getURIForPath("/proxy/auth-test.html").data());
+     WebKitAuthenticationRequest* request = test->waitForAuthenticationRequest();
++#if USE(SOUP2)
++    // FIXME: the uri and host should the proxy ones, not the requested ones.
++    ASSERT_CMP_CSTRING(webkit_authentication_request_get_host(request), ==, httpsServer->baseURL().host().toString().utf8());
++    g_assert_cmpuint(webkit_authentication_request_get_port(request), ==, httpsServer->port());
++#else
+     ASSERT_CMP_CSTRING(webkit_authentication_request_get_host(request), ==, test->m_proxyServer.baseURL().host().toString().utf8());
+     g_assert_cmpuint(webkit_authentication_request_get_port(request), ==, test->m_proxyServer.port());
++#endif
+     g_assert_cmpstr(webkit_authentication_request_get_realm(request), ==, "Proxy realm");
+     g_assert_cmpint(webkit_authentication_request_get_scheme(request), ==, WEBKIT_AUTHENTICATION_SCHEME_HTTP_BASIC);
+     g_assert_true(webkit_authentication_request_is_for_proxy(request));
+@@ -512,8 +552,13 @@ static void testWebViewAuthenticationProxyHTTPS(ProxyAuthenticationTest* test, g
+     auto* origin = webkit_authentication_request_get_security_origin(request);
+     g_assert_nonnull(origin);
+     ASSERT_CMP_CSTRING(webkit_security_origin_get_protocol(origin), ==, httpsServer->baseURL().protocol().toString().utf8());
++#if USE(SOUP2)
++    ASSERT_CMP_CSTRING(webkit_security_origin_get_host(origin), ==, httpsServer->baseURL().host().toString().utf8());
++    g_assert_cmpuint(webkit_security_origin_get_port(origin), ==, httpsServer->port());
++#else
+     ASSERT_CMP_CSTRING(webkit_security_origin_get_host(origin), ==, test->m_proxyServer.baseURL().host().toString().utf8());
+     g_assert_cmpuint(webkit_security_origin_get_port(origin), ==, test->m_proxyServer.port());
++#endif
+     webkit_security_origin_unref(origin);
+ }
+ 
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp
+index 689f3c551c7c..52c0affc768d 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp
+@@ -21,6 +21,7 @@
+ 
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <libsoup/soup.h>
+ #include <string.h>
+ 
+@@ -29,7 +30,11 @@ static const int kBackForwardListLimit = 100;
+ 
+ static WebKitTestServer* kServer;
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* msg, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* msg, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(msg) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(msg, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp
+index b71c0b6431a6..31aafecfa6ab 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp
+@@ -23,6 +23,7 @@
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
+ #include <WebCore/GUniquePtrSoup.h>
++#include <WebCore/SoupVersioning.h>
+ #include <glib/gstdio.h>
+ 
+ static WebKitTestServer* kServer;
+@@ -844,7 +845,11 @@ static void testCookieManagerLongExpires(CookieManagerTest* test, gconstpointer)
+     SoupCookie* cookie = static_cast<SoupCookie*>(cookies->data);
+     auto* cookiesExpires = soup_cookie_get_expires(cookie);
+     g_assert_nonnull(cookiesExpires);
++#if USE(SOUP2)
++    g_assert_cmpint(g_date_time_to_unix(expires.get()), ==, soup_date_to_time_t(cookiesExpires));
++#else
+     g_assert_cmpint(g_date_time_to_unix(expires.get()), ==, g_date_time_to_unix(cookiesExpires));
++#endif
+ 
+     test->deleteAllCookies();
+     g_assert_cmpint(g_strv_length(test->getDomains()), ==, 0);
+@@ -900,7 +905,11 @@ static void testCookieSyncWithWebView(CookiePersistentStorageTest* test, gconstp
+     g_assert_cmpstr(cookieString.get(), ==, "baz=value");
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp
+index f256a3b7eedc..898b76af1bba 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp
+@@ -21,6 +21,7 @@
+ 
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <glib/gstdio.h>
+ #include <libsoup/soup.h>
+ #include <string.h>
+@@ -401,13 +402,21 @@ static WebKitTestServer* kServer;
+ static const char* kServerSuggestedFilename = "webkit-downloaded-file";
+ static HashMap<CString, CString> s_userAgentMap;
+ 
++#if USE(SOUP2)
++static void addContentDispositionHTTPHeaderToResponse(SoupMessage* message)
++#else
+ static void addContentDispositionHTTPHeaderToResponse(SoupServerMessage* message)
++#endif
+ {
+     GUniquePtr<char> contentDisposition(g_strdup_printf("attachment; filename=%s", kServerSuggestedFilename));
+     soup_message_headers_append(soup_server_message_get_response_headers(message), "Content-Disposition", contentDisposition.get());
+ }
+ 
++#if USE(SOUP2)
++static void writeNextChunk(SoupMessage* message)
++#else
+ static void writeNextChunk(SoupServerMessage* message)
++#endif
+ {
+     /* We need a big enough chunk for the sniffer to not block the load */
+     static const char* chunk = "Testing!Testing!Testing!Testing!Testing!Testing!Testing!"
+@@ -420,7 +429,11 @@ static void writeNextChunk(SoupServerMessage* message)
+     soup_message_body_append(soup_server_message_get_response_body(message), SOUP_MEMORY_STATIC, chunk, strlen(chunk));
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp
+index 72461e02d71a..05e6c6692f69 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp
+@@ -24,6 +24,7 @@
+ #include "LoadTrackingTest.h"
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <libsoup/soup.h>
+ #include <wtf/Vector.h>
+ #include <wtf/text/CString.h>
+@@ -725,7 +726,11 @@ static void testUserAgent(WebViewTest* test, gconstpointer)
+     s_userAgentMap.clear();
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     static const char* responseString = "<html><body>Testing!Testing!Testing!Testing!Testing!Testing!Testing!"
+         "Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!"
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestNetworkProcessMemoryPressure.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestNetworkProcessMemoryPressure.cpp
+index 175df404d1b2..6af5b3f5746f 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestNetworkProcessMemoryPressure.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestNetworkProcessMemoryPressure.cpp
+@@ -21,10 +21,15 @@
+ 
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ 
+ static WebKitTestServer* kServer;
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp
+index fbd4e25e7f5c..5177ed6edb1b 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp
+@@ -21,6 +21,7 @@
+ 
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <wtf/Vector.h>
+ #include <wtf/glib/GMutexLocker.h>
+ #include <wtf/glib/GRefPtr.h>
+@@ -753,6 +754,21 @@ static void testWebViewSyncRequestOnMaxConns(SyncRequestOnMaxConnsTest* test, gc
+         g_source_remove(context.unlockServerSourceID);
+ }
+ 
++#if USE(SOUP2)
++static void addCacheHTTPHeadersToResponse(SoupMessage* message)
++{
++    // The actual date doesn't really matter.
++    SoupDate* soupDate = soup_date_new_from_now(0);
++    GUniquePtr<char> date(soup_date_to_string(soupDate, SOUP_DATE_HTTP));
++    soup_message_headers_append(message->response_headers, "Last-Modified", date.get());
++    soup_date_free(soupDate);
++    soup_message_headers_append(message->response_headers, "Cache-control", "public, max-age=31536000");
++    soupDate = soup_date_new_from_now(3600);
++    date.reset(soup_date_to_string(soupDate, SOUP_DATE_HTTP));
++    soup_message_headers_append(message->response_headers, "Expires", date.get());
++    soup_date_free(soupDate);
++}
++#else
+ static void addCacheHTTPHeadersToResponse(SoupServerMessage* message)
+ {
+     // The actual date doesn't really matter.
+@@ -765,8 +781,13 @@ static void addCacheHTTPHeadersToResponse(SoupServerMessage* message)
+     date.reset(soup_date_time_to_string(dateTime.get(), SOUP_DATE_HTTP));
+     soup_message_headers_append(responseHeaders, "Expires", date.get());
+ }
++#endif
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp
+index eb863ece3eec..fa88350fb9da 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp
+@@ -21,6 +21,7 @@
+ 
+ #include "LoadTrackingTest.h"
+ #include "WebKitTestServer.h"
++#include <WebCore/SoupVersioning.h>
+ 
+ static WebKitTestServer* kHttpsServer;
+ static WebKitTestServer* kHttpServer;
+@@ -392,7 +393,11 @@ public:
+         "    socket.removeEventListener('open', onOpen);"
+         "}";
+ 
++#if USE(SOUP2)
++    static void serverWebSocketCallback(SoupServer*, SoupWebsocketConnection*, const char*, SoupClientContext*, gpointer userData)
++#else
+     static void serverWebSocketCallback(SoupServer*, SoupServerMessage*, const char*, SoupWebsocketConnection*, gpointer userData)
++#endif
+     {
+         static_cast<WebSocketTest*>(userData)->m_events |= WebSocketTest::EventFlags::DidServerCompleteHandshake;
+     }
+@@ -490,6 +495,7 @@ static void testTLSErrorsEphemeral(EphemeralSSLTest* test, gconstpointer)
+     g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::LoadCommitted));
+ }
+ 
++#if !USE(SOUP2)
+ class ClientSideCertificateTestBase {
+ public:
+     static gboolean acceptCertificateCallback(SoupServerMessage* message, GTlsCertificate* certificate, GTlsCertificateFlags errors, ClientSideCertificateTestBase* test)
+@@ -704,8 +710,13 @@ static void testWebSocketClientSideCertificate(WebSocketClientSideCertificateTes
+     g_assert_true(events & WebSocketTest::EventFlags::DidOpen);
+     g_assert_false(events & WebSocketTest::EventFlags::DidClose);
+ }
++#endif
+ 
++#if USE(SOUP2)
++static void httpsServerCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void httpsServerCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+@@ -743,7 +754,11 @@ static void httpsServerCallback(SoupServer* server, SoupServerMessage* message,
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_FOUND, nullptr);
+ }
+ 
++#if USE(SOUP2)
++static void httpServerCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void httpServerCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+@@ -797,8 +812,10 @@ void beforeAll()
+     TLSErrorsTest::add("WebKitWebView", "load-failed-with-tls-errors", testLoadFailedWithTLSErrors);
+     WebSocketTest::add("WebKitWebView", "web-socket-tls-errors", testWebSocketTLSErrors);
+     EphemeralSSLTest::add("WebKitWebView", "ephemeral-tls-errors", testTLSErrorsEphemeral);
++#if !USE(SOUP2)
+     ClientSideCertificateTest::add("WebKitWebView", "client-side-certificate", testClientSideCertificate);
+     WebSocketClientSideCertificateTest::add("WebKitWebView", "web-socket-client-side-certificate", testWebSocketClientSideCertificate);
++#endif
+ }
+ 
+ void afterAll()
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp
+index 00c1d159f34a..0fe820ae9b18 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp
+@@ -23,6 +23,7 @@
+ 
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <glib/gstdio.h>
+ #include <libsoup/soup.h>
+ #include <wtf/glib/GUniquePtr.h>
+@@ -201,7 +202,11 @@ public:
+     bool m_waitingForFaviconURI { false };
+ };
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer*, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer*, SoupServerMessage* message, const char* path, GHashTable* query, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitPolicyClient.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitPolicyClient.cpp
+index 7ba9d99adbdf..c619a8afa176 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitPolicyClient.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitPolicyClient.cpp
+@@ -23,6 +23,7 @@
+ #include "LoadTrackingTest.h"
+ #include "WebKitTestServer.h"
+ #include "WebKitWebsitePolicies.h"
++#include <WebCore/SoupVersioning.h>
+ #include <wtf/glib/GRefPtr.h>
+ #include <wtf/text/CString.h>
+ 
+@@ -301,7 +302,11 @@ static void testNewWindowPolicy(PolicyClientTest* test, gconstpointer)
+     g_assert_false(data.triedToOpenWindow);
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitSettings.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitSettings.cpp
+index 38c0da74d007..577409b9249f 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitSettings.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitSettings.cpp
+@@ -33,6 +33,7 @@
+ #include "TestMain.h"
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <wtf/HashSet.h>
+ #include <wtf/glib/GRefPtr.h>
+ #include <wtf/text/MakeString.h>
+@@ -659,7 +660,11 @@ static void testWebKitSettingsJavaScriptMarkup(WebViewTest* test, gconstpointer)
+     webkit_settings_set_enable_javascript_markup(webkit_web_view_get_settings(test->webView()), TRUE);
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitUserContentManager.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitUserContentManager.cpp
+index d9d8a6e86aca..8e79ad040362 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitUserContentManager.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitUserContentManager.cpp
+@@ -21,6 +21,7 @@
+ 
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <cstdarg>
+ #include <wtf/glib/GRefPtr.h>
+ #include <wtf/glib/GUniquePtr.h>
+@@ -657,7 +658,11 @@ static void testUserContentManagerContentFilter(WebViewTest* test, gconstpointer
+     webkit_user_content_filter_unref(filter);
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
+     auto* responseBody = soup_server_message_get_response_body(message);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebContext.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebContext.cpp
+index b60b425a4c03..699acbe7fabb 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebContext.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebContext.cpp
+@@ -22,6 +22,7 @@
+ #include "LoadTrackingTest.h"
+ #include "WebKitTestServer.h"
+ #include "WebKitWebViewInternal.h"
++#include <WebCore/SoupVersioning.h>
+ #include <libsoup/soup.h>
+ #include <limits.h>
+ #include <stdlib.h>
+@@ -505,7 +506,11 @@ static void testWebContextLanguages(WebViewTest* test, gconstpointer)
+     g_assert_cmpstr(locale.get(), !=, "A");
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext* context, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+@@ -525,7 +530,11 @@ static void serverCallback(SoupServer* server, SoupServerMessage* message, const
+         soup_message_body_complete(responseBody);
+         soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
+     } else if (g_str_equal(path, "/echoPort")) {
++#if USE(SOUP2)
++        char* port = g_strdup_printf("%u", g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(soup_client_context_get_local_address(context))));
++#else
+         char* port = g_strdup_printf("%u", g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(soup_server_message_get_local_address(message))));
++#endif
+         soup_message_body_append(responseBody, SOUP_MEMORY_TAKE, port, strlen(port));
+         soup_message_body_complete(responseBody);
+         soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
+@@ -700,16 +709,22 @@ class ProxyTest : public WebViewTest {
+ public:
+     MAKE_GLIB_TEST_FIXTURE(ProxyTest);
+ 
++#if SOUP_CHECK_VERSION(2, 61, 90)
+     enum class WebSocketServerType {
+         Unknown,
+         NoProxy,
+         Proxy
+     };
+ 
++#if USE(SOUP2)
++    static void webSocketProxyServerCallback(SoupServer*, SoupWebsocketConnection*, const char* path, SoupClientContext*, gpointer userData)
++#else
+     static void webSocketProxyServerCallback(SoupServer*, SoupServerMessage*, const char* path, SoupWebsocketConnection*, gpointer userData)
++#endif
+     {
+         static_cast<ProxyTest*>(userData)->webSocketConnected(ProxyTest::WebSocketServerType::Proxy);
+     }
++#endif
+ 
+     ProxyTest()
+     {
+@@ -720,8 +735,10 @@ public:
+         // work, not whether we can write a soup proxy server.
+         m_proxyServer.run(serverCallback);
+         g_assert_false(m_proxyServer.baseURL().isNull());
++#if SOUP_CHECK_VERSION(2, 61, 90)
+         m_proxyServer.addWebSocketHandler(webSocketProxyServerCallback, this);
+         g_assert_false(m_proxyServer.baseWebSocketURL().isNull());
++#endif
+     }
+ 
+     CString loadURIAndGetMainResourceData(const char* uri)
+@@ -739,6 +756,7 @@ public:
+         return port;
+     }
+ 
++#if SOUP_CHECK_VERSION(2, 61, 90)
+     void webSocketConnected(WebSocketServerType serverType)
+     {
+         m_webSocketRequestReceived = serverType;
+@@ -752,16 +770,26 @@ public:
+         runJavaScriptAndWait(createWebSocket.get());
+         return m_webSocketRequestReceived;
+     }
++#endif
+ 
+     WebKitTestServer m_proxyServer;
++
++#if SOUP_CHECK_VERSION(2, 61, 90)
+     WebSocketServerType m_webSocketRequestReceived { WebSocketServerType::Unknown };
++#endif
+ };
+ 
+ #if !ENABLE(2022_GLIB_API)
++#if SOUP_CHECK_VERSION(2, 61, 90)
++#if USE(SOUP2)
++static void webSocketServerCallback(SoupServer*, SoupWebsocketConnection*, const char*, SoupClientContext*, gpointer userData)
++#else
+ static void webSocketServerCallback(SoupServer*, SoupServerMessage*, const char*, SoupWebsocketConnection*, gpointer userData)
++#endif
+ {
+     static_cast<ProxyTest*>(userData)->webSocketConnected(ProxyTest::WebSocketServerType::NoProxy);
+ }
++#endif
+ 
+ static void ephemeralViewloadChanged(WebKitWebView* webView, WebKitLoadEvent loadEvent, WebViewTest* test)
+ {
+@@ -778,10 +806,12 @@ static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
+     auto mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
+     ASSERT_CMP_CSTRING(mainResourceData, ==, serverPortAsString.get());
+ 
++#if SOUP_CHECK_VERSION(2, 61, 90)
+     // WebSocket requests should also be received by kServer.
+     kServer->addWebSocketHandler(webSocketServerCallback, test);
+     auto serverType = test->createWebSocketAndWaitUntilConnected();
+     g_assert_true(serverType == ProxyTest::WebSocketServerType::NoProxy);
++#endif
+ 
+     // Set default proxy URI to point to proxyServer. Requests to kServer should be received by proxyServer instead.
+     WebKitNetworkProxySettings* settings = webkit_network_proxy_settings_new(test->m_proxyServer.baseURL().string().utf8().data(), nullptr);
+@@ -792,9 +822,11 @@ static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
+     ASSERT_CMP_CSTRING(mainResourceData, ==, proxyServerPortAsString.get());
+     webkit_network_proxy_settings_free(settings);
+ 
++#if SOUP_CHECK_VERSION(2, 61, 90)
+     // WebSocket requests should also be received by proxyServer.
+     serverType = test->createWebSocketAndWaitUntilConnected();
+     g_assert_true(serverType == ProxyTest::WebSocketServerType::Proxy);
++#endif
+ 
+     // Proxy settings also affect ephemeral web views.
+     auto webView = test->createWebView("is-ephemeral", TRUE, nullptr);
+@@ -851,7 +883,9 @@ static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
+     mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
+     ASSERT_CMP_CSTRING(mainResourceData, ==, serverPortAsString.get());
+ 
++#if SOUP_CHECK_VERSION(2, 61, 90)
+     kServer->removeWebSocketHandler();
++#endif
+ }
+ #endif
+ 
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebView.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebView.cpp
+index bfb6dd1c95fa..3acc7a129c21 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebView.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebView.cpp
+@@ -21,6 +21,7 @@
+ #include "config.h"
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <glib/gstdio.h>
+ #include <wtf/glib/GRefPtr.h>
+ #include <wtf/glib/GSpanExtras.h>
+@@ -2246,7 +2247,11 @@ static void testWebViewLoadAlternateHTMLFromPageWithCSP(WebViewTest* test, gcons
+     g_assert_no_error(error.get());
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebXR.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebXR.cpp
+index 0c67013d9caa..7af715c860e5 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebXR.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebXR.cpp
+@@ -117,7 +117,11 @@ WebXRTest::WebXRTest()
+     relaxDMABufRequirement(defaultSettings);
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer*, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer*, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     g_assert(soup_server_message_get_method(message) == SOUP_METHOD_GET);
+ 
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebsiteData.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebsiteData.cpp
+index 5061abe6e49c..973277430604 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebsiteData.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebsiteData.cpp
+@@ -22,11 +22,16 @@
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
+ #include <WebCore/GUniquePtrSoup.h>
++#include <WebCore/SoupVersioning.h>
+ #include <glib/gstdio.h>
+ 
+ static WebKitTestServer* kServer;
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+@@ -587,6 +592,7 @@ static void testWebsiteDataDatabases(WebsiteDataTest* test, gconstpointer)
+     g_assert_null(dataList);
+ }
+ 
++#if SOUP_CHECK_VERSION(2, 67, 91)
+ static void prepopulateHstsData()
+ {
+     // HSTS headers will be ignored in this test because the spec forbids STS policies from being honored for hosts with
+@@ -628,6 +634,7 @@ static void testWebsiteDataHsts(WebsiteDataTest* test, gconstpointer)
+     test->clear(WEBKIT_WEBSITE_DATA_HSTS_CACHE, 0);
+     g_assert_null(test->fetch(WEBKIT_WEBSITE_DATA_HSTS_CACHE));
+ }
++#endif
+ 
+ static void testWebsiteDataCookies(WebsiteDataTest* test, gconstpointer)
+ {
+@@ -894,7 +901,9 @@ void beforeAll()
+     kServer = new WebKitTestServer();
+     kServer->run(serverCallback);
+ 
++#if SOUP_CHECK_VERSION(2, 67, 91)
+     prepopulateHstsData();
++#endif
+ 
+     WebsiteDataTest::add("WebKitWebsiteData", "configuration", testWebsiteDataConfiguration);
+     WebViewTest::add("WebKitWebsiteData", "ephemeral", testWebsiteDataEphemeral);
+@@ -902,7 +911,9 @@ void beforeAll()
+     WebsiteDataTest::add("WebKitWebsiteData", "storage", testWebsiteDataStorage);
+     WebsiteDataTest::add("WebKitWebsiteData", "databases", testWebsiteDataDatabases);
+     WebsiteDataTest::add("WebKitWebsiteData", "cookies", testWebsiteDataCookies);
++#if SOUP_CHECK_VERSION(2, 67, 91)
+     WebsiteDataTest::add("WebKitWebsiteData", "hsts", testWebsiteDataHsts);
++#endif
+     WebsiteDataTest::add("WebKitWebsiteData", "deviceidhashsalt", testWebsiteDataDeviceIdHashSalt);
+     WebsiteDataTest::add("WebKitWebsiteData", "itp", testWebsiteDataITP);
+     WebsiteDataTest::add("WebKitWebsiteData", "service-worker-registrations", testWebsiteDataServiceWorkerRegistrations);
+diff --git a/Tools/TestWebKitAPI/Tests/WebKitGtk/TestContextMenu.cpp b/Tools/TestWebKitAPI/Tests/WebKitGtk/TestContextMenu.cpp
+index a91f6afced9b..84854657b78f 100644
+--- a/Tools/TestWebKitAPI/Tests/WebKitGtk/TestContextMenu.cpp
++++ b/Tools/TestWebKitAPI/Tests/WebKitGtk/TestContextMenu.cpp
+@@ -21,6 +21,7 @@
+ 
+ #include "WebKitTestServer.h"
+ #include "WebViewTest.h"
++#include <WebCore/SoupVersioning.h>
+ #include <wtf/Vector.h>
+ #include <wtf/glib/GRefPtr.h>
+ 
+@@ -1107,7 +1108,11 @@ static void testContextMenuWebExtensionNode(ContextMenuWebExtensionNodeTest* tes
+     g_assert_cmpstr(test->m_node.parentName.data(), ==, "A");
+ }
+ 
++#if USE(SOUP2)
++static void writeNextChunk(SoupMessage* message)
++#else
+ static void writeNextChunk(SoupServerMessage* message)
++#endif
+ {
+     auto* responseBody = soup_server_message_get_response_body(message);
+     GUniquePtr<char> filePath(g_build_filename(Test::getResourcesDir().data(), "silence.webm", nullptr));
+@@ -1123,7 +1128,11 @@ static void writeNextChunk(SoupServerMessage* message)
+     soup_message_body_complete(responseBody);
+ }
+ 
++#if USE(SOUP2)
++static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
++#else
+ static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
++#endif
+ {
+     if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+         soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp b/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
+index 47375e39b5e3..2691e97b1ed8 100644
+--- a/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
++++ b/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
+@@ -62,8 +62,14 @@ void WebKitTestServer::run(SoupServerCallback serverCallback)
+ 
+     GSList* uris = soup_server_get_uris(m_soupServer.get());
+     g_assert_nonnull(uris);
++#if USE(SOUP2)
++    GUniquePtr<gchar> urlString(soup_uri_to_string(static_cast<SoupURI*>(uris->data), FALSE));
++    m_baseURL = URL({ }, String::fromUTF8(urlString.get()));
++    g_slist_free_full(uris, reinterpret_cast<GDestroyNotify>(soup_uri_free));
++#else
+     m_baseURL = static_cast<GUri*>(uris->data);
+     g_slist_free_full(uris, reinterpret_cast<GDestroyNotify>(g_uri_unref));
++#endif
+ }
+ 
+ void WebKitTestServer::addWebSocketHandler(SoupServerWebsocketCallback callback, gpointer userData)
+diff --git a/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.h b/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.h
+index a0ab5439a86d..1e80c652dbc0 100644
+--- a/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.h
++++ b/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.h
+@@ -46,14 +46,18 @@ public:
+     CString getURIForPath(const char* path) const;
+     void run(SoupServerCallback);
+ 
++#if SOUP_CHECK_VERSION(2, 50, 0)
+     void addWebSocketHandler(SoupServerWebsocketCallback, gpointer userData);
+     void removeWebSocketHandler();
+     const URL& baseWebSocketURL() const { return m_baseWebSocketURL; }
+     CString getWebSocketURIForPath(const char* path) const;
++#endif
+ 
+ private:
+     GRefPtr<SoupServer> m_soupServer;
+     URL m_baseURL;
++#if SOUP_CHECK_VERSION(2, 50, 0)
+     URL m_baseWebSocketURL;
++#endif
+     RefPtr<WorkQueue> m_queue;
+ };
+-- 
+2.53.0
+
