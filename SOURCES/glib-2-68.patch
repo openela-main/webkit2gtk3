@@ -1,4 +1,4 @@
-From e9eb6e9b59fbb92ff30ec88b9a3ff2bd7857c23a Mon Sep 17 00:00:00 2001
+From dbcb36a6555e7c7e58527ac4f797abe4b1782362 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 8 Aug 2025 10:55:54 -0500
 Subject: [PATCH] Revert "[GLib] Remove all GLIB_CHECK_VERSION conditionals"
@@ -212,12 +212,12 @@ index 6112a107f99a..b569c48de5ba 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index a5ebd3e3d879..11227320f60b 100644
+index 94fc72774189..6eaecf20d65d 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -7,8 +7,7 @@ SET_PROJECT_VERSION(2 52 3)
- 
- set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
+@@ -10,8 +10,7 @@ set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
+ set(ENABLE_UNSAFE_BUFFER_USAGE_WARNING ON)
+ list(APPEND WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS -Wno-unsafe-buffer-usage-in-format-attr-call)
  
 -# Update Source/WTF/wtf/Platform.h to match required GLib versions.
 -find_package(GLib 2.70.0 REQUIRED COMPONENTS GioUnix Thread Module)
@@ -225,7 +225,7 @@ index a5ebd3e3d879..11227320f60b 100644
  find_package(Cairo 1.16.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
  find_package(Soup3 3.0.0 REQUIRED)
-@@ -258,6 +257,11 @@ if (ENABLED_COMPILER_SANITIZERS)
+@@ -261,6 +260,11 @@ if (ENABLED_COMPILER_SANITIZERS)
      set(ENABLE_DOCUMENTATION OFF)
  endif ()
  
@@ -238,5 +238,5 @@ index a5ebd3e3d879..11227320f60b 100644
      find_package(Manette 0.2.4)
      if (NOT Manette_FOUND)
 -- 
-2.53.0
+2.54.0
 

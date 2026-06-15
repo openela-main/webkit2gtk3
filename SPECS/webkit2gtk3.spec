@@ -19,7 +19,7 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.52.3
+Version:        2.52.4
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -49,8 +49,8 @@ Patch:          evolution-sandbox-warning.patch
 ## Upstream patches to remove, hopefully after next update
 ##
 
-# https://github.com/WebKit/WebKit/pull/58096
-Patch:          aarch64-build.patch
+# https://bugs.webkit.org/show_bug.cgi?id=312677
+Patch:          build.patch
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
@@ -329,6 +329,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Tue Jun 09 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.52.4-1
+- Update to 2.52.4
+
 * Fri Apr 17 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.52.3-1
 - Update to 2.52.3
 
