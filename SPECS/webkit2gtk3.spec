@@ -6,7 +6,7 @@
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
 Name:           webkit2gtk3
-Version:        2.52.3
+Version:        2.52.4
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -48,14 +48,18 @@ Patch306:       g-ir-scanner-nonfatal.patch
 ## Upstream patches to remove, hopefully after next update
 ##
 
-# https://github.com/WebKit/WebKit/pull/58096
-Patch400:          aarch64-build.patch
+# https://bugs.webkit.org/show_bug.cgi?id=312677
+Patch:          build.patch
+
+# *** FRAGILE ***
+# If the build fails due to undefined reference to an atomic function, then
+# ensure the GCC toolset version here matches the version in the buildroot.
+BuildRequires:  gcc-toolset-15-libatomic-devel
 
 BuildRequires:  bison
 BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  flex
-BuildRequires:  gcc-toolset-14-libatomic-devel
 BuildRequires:  gettext
 BuildRequires:  git
 BuildRequires:  gnupg2
@@ -317,6 +321,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Wed Jun 10 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.52.4-1
+- Update to 2.52.4
+
 * Wed Apr 22 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.52.3-1
 - Update to 2.52.3
 

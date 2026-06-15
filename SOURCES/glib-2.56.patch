@@ -1,4 +1,4 @@
-From faa96c8ff6fa906beaa5daf8e36bc1f865a9cf66 Mon Sep 17 00:00:00 2001
+From 214fc050c44b5e57a748de8cb6f158d831209dce Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 4 Apr 2025 13:58:05 -0500
 Subject: [PATCH] Build against GLib 2.56
@@ -388,11 +388,11 @@ index 6112a107f99a..b569c48de5ba 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index a5ebd3e3d879..ce1791f7a470 100644
+index 94fc72774189..9c699e416486 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
-@@ -8,7 +8,7 @@ SET_PROJECT_VERSION(2 52 3)
- set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
+@@ -11,7 +11,7 @@ set(ENABLE_UNSAFE_BUFFER_USAGE_WARNING ON)
+ list(APPEND WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS -Wno-unsafe-buffer-usage-in-format-attr-call)
  
  # Update Source/WTF/wtf/Platform.h to match required GLib versions.
 -find_package(GLib 2.70.0 REQUIRED COMPONENTS GioUnix Thread Module)
@@ -400,7 +400,7 @@ index a5ebd3e3d879..ce1791f7a470 100644
  find_package(Cairo 1.16.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
  find_package(Soup3 3.0.0 REQUIRED)
-@@ -258,6 +258,11 @@ if (ENABLED_COMPILER_SANITIZERS)
+@@ -261,6 +261,11 @@ if (ENABLED_COMPILER_SANITIZERS)
      set(ENABLE_DOCUMENTATION OFF)
  endif ()
  
@@ -452,5 +452,5 @@ index d3fbb968ee46..4f49ad82f9fd 100644
      }
  
 -- 
-2.53.0
+2.54.0
 
