@@ -1,29 +1,30 @@
-From 214fc050c44b5e57a748de8cb6f158d831209dce Mon Sep 17 00:00:00 2001
-From: Michael Catanzaro <mcatanzaro@redhat.com>
-Date: Fri, 4 Apr 2025 13:58:05 -0500
-Subject: [PATCH] Build against GLib 2.56
+From 5eab05b55cd0663cf4b92a280299b9841e0108c3 Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Fri, 17 Jul 2026 02:00:00 +0200
+Subject: [PATCH] glib-2.56.patch
 
 ---
- Source/WTF/wtf/Platform.h                           |  2 +-
- Source/WTF/wtf/URL.h                                |  4 ++--
- Source/WTF/wtf/glib/GRefPtr.h                       |  2 ++
- Source/WTF/wtf/glib/SocketConnection.cpp            | 13 ++++++++++++-
- Source/WTF/wtf/glib/URLGLib.cpp                     |  2 ++
- Source/WebCore/platform/LowPowerModeNotifier.h      |  2 ++
- .../platform/glib/LowPowerModeNotifierGLib.cpp      |  8 ++++++++
- .../platform/network/soup/CertificateInfoSoup.cpp   |  8 ++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.cpp      | 12 ++++++++++++
- Source/WebKit/NetworkProcess/glib/DNSCache.h        |  2 ++
- .../NetworkProcess/glib/WebKitCachedResolver.cpp    |  6 ++++++
- .../glib/WebKitOverridingResolver.cpp               |  4 ++++
- Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp    |  6 ++++++
- Source/cmake/OptionsGTK.cmake                       |  7 ++++++-
- Tools/MiniBrowser/gtk/BrowserSettingsDialog.c       |  3 ++-
- Tools/MiniBrowser/gtk/main.c                        |  3 ++-
- 16 files changed, 77 insertions(+), 7 deletions(-)
+ Source/WTF/wtf/Platform.h                     |  2 +-
+ Source/WTF/wtf/URL.h                          |  4 +-
+ Source/WTF/wtf/glib/GRefPtr.h                 |  2 +
+ Source/WTF/wtf/glib/SocketConnection.cpp      | 13 +++++-
+ Source/WTF/wtf/glib/URLGLib.cpp               |  2 +
+ .../WebCore/platform/LowPowerModeNotifier.h   |  2 +
+ .../glib/LowPowerModeNotifierGLib.cpp         |  8 ++++
+ .../gstreamer/TrackPrivateBaseGStreamer.cpp   | 40 +++++++++++++++----
+ .../network/soup/CertificateInfoSoup.cpp      |  8 ++++
+ .../WebKit/NetworkProcess/glib/DNSCache.cpp   | 12 ++++++
+ Source/WebKit/NetworkProcess/glib/DNSCache.h  |  2 +
+ .../glib/WebKitCachedResolver.cpp             |  6 +++
+ .../glib/WebKitOverridingResolver.cpp         |  4 ++
+ .../WebKit/Shared/glib/ArgumentCodersGLib.cpp |  6 +++
+ Source/cmake/OptionsGTK.cmake                 |  7 +++-
+ Tools/MiniBrowser/gtk/BrowserSettingsDialog.c |  3 +-
+ Tools/MiniBrowser/gtk/main.c                  |  3 +-
+ 17 files changed, 109 insertions(+), 15 deletions(-)
 
 diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
-index 0c3ba74482f6..57a1b5126290 100644
+index 0c3ba74..57a1b51 100644
 --- a/Source/WTF/wtf/Platform.h
 +++ b/Source/WTF/wtf/Platform.h
 @@ -92,7 +92,7 @@
@@ -36,7 +37,7 @@ index 0c3ba74482f6..57a1b5126290 100644
  
  #if PLATFORM(GTK)
 diff --git a/Source/WTF/wtf/URL.h b/Source/WTF/wtf/URL.h
-index 677314b5c781..f739e6df4892 100644
+index 677314b..f739e6d 100644
 --- a/Source/WTF/wtf/URL.h
 +++ b/Source/WTF/wtf/URL.h
 @@ -27,7 +27,7 @@
@@ -58,7 +59,7 @@ index 677314b5c781..f739e6df4892 100644
      WTF_EXPORT_PRIVATE GRefPtr<GUri> createGUri() const;
  #endif
 diff --git a/Source/WTF/wtf/glib/GRefPtr.h b/Source/WTF/wtf/glib/GRefPtr.h
-index 46d25f00cc69..d3a764808a6f 100644
+index 46d25f0..d3a7648 100644
 --- a/Source/WTF/wtf/glib/GRefPtr.h
 +++ b/Source/WTF/wtf/glib/GRefPtr.h
 @@ -329,7 +329,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
@@ -72,7 +73,7 @@ index 46d25f00cc69..d3a764808a6f 100644
  WTF_DEFINE_GREF_TRAITS_INLINE(GVariant, g_variant_ref_sink, g_variant_unref, g_variant_is_floating)
  
 diff --git a/Source/WTF/wtf/glib/SocketConnection.cpp b/Source/WTF/wtf/glib/SocketConnection.cpp
-index b74955924938..4ea234a93c30 100644
+index b749559..4ea234a 100644
 --- a/Source/WTF/wtf/glib/SocketConnection.cpp
 +++ b/Source/WTF/wtf/glib/SocketConnection.cpp
 @@ -166,7 +166,18 @@ bool SocketConnection::readMessage()
@@ -96,7 +97,7 @@ index b74955924938..4ea234a93c30 100644
                  parameters = adoptGRef(g_variant_byteswap(parameters.get()));
          }
 diff --git a/Source/WTF/wtf/glib/URLGLib.cpp b/Source/WTF/wtf/glib/URLGLib.cpp
-index 589dc1b52f8f..f67fe780f333 100644
+index 589dc1b..f67fe78 100644
 --- a/Source/WTF/wtf/glib/URLGLib.cpp
 +++ b/Source/WTF/wtf/glib/URLGLib.cpp
 @@ -35,6 +35,7 @@
@@ -116,7 +117,7 @@ index 589dc1b52f8f..f67fe780f333 100644
  bool URL::hostIsIPAddress(StringView host)
  {
 diff --git a/Source/WebCore/platform/LowPowerModeNotifier.h b/Source/WebCore/platform/LowPowerModeNotifier.h
-index c8f2051d77f6..e2ea0dae3292 100644
+index c8f2051..e2ea0da 100644
 --- a/Source/WebCore/platform/LowPowerModeNotifier.h
 +++ b/Source/WebCore/platform/LowPowerModeNotifier.h
 @@ -61,8 +61,10 @@ private:
@@ -131,7 +132,7 @@ index c8f2051d77f6..e2ea0dae3292 100644
  #endif
  };
 diff --git a/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp b/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
-index c9bf6a774f49..546a974075c6 100644
+index c9bf6a7..546a974 100644
 --- a/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
 +++ b/Source/WebCore/platform/glib/LowPowerModeNotifierGLib.cpp
 @@ -28,10 +28,13 @@ namespace WebCore {
@@ -165,8 +166,80 @@ index c9bf6a774f49..546a974075c6 100644
  }
  
  bool LowPowerModeNotifier::isLowPowerModeEnabled() const
+diff --git a/Source/WebCore/platform/graphics/gstreamer/TrackPrivateBaseGStreamer.cpp b/Source/WebCore/platform/graphics/gstreamer/TrackPrivateBaseGStreamer.cpp
+index d3a51ee..0e2e8c6 100644
+--- a/Source/WebCore/platform/graphics/gstreamer/TrackPrivateBaseGStreamer.cpp
++++ b/Source/WebCore/platform/graphics/gstreamer/TrackPrivateBaseGStreamer.cpp
+@@ -173,8 +173,14 @@ void TrackDataHolder::setPad(GRefPtr<GstPad>&& pad)
+     if (m_bestUpstreamPad && m_eventProbe)
+         gst_pad_remove_probe(m_bestUpstreamPad.get(), m_eventProbe);
+ 
+-    g_clear_signal_handler(&m_padTagsNotifyHandlerId, m_pad.get());
+-    g_clear_signal_handler(&m_padCapsNotifyHandlerId, m_pad.get());
++    if (m_pad.get() != nullptr && m_padTagsNotifyHandlerId != 0) {
++        g_signal_handler_disconnect (m_pad.get(), m_padTagsNotifyHandlerId);
++        m_padTagsNotifyHandlerId = 0;
++    }
++    if (m_pad.get() != nullptr && m_padCapsNotifyHandlerId != 0) {
++        g_signal_handler_disconnect (m_pad.get(), m_padCapsNotifyHandlerId);
++        m_padCapsNotifyHandlerId = 0;
++    }
+     m_pad = WTF::move(pad);
+     m_bestUpstreamPad = findBestUpstreamPad(m_pad);
+     m_gstStreamId = byteCast<Latin1Character>(unsafeSpan(gst_pad_get_stream_id(m_pad.get())));
+@@ -224,8 +230,14 @@ void TrackDataHolder::setPad(GRefPtr<GstPad>&& pad)
+ 
+ void TrackDataHolder::setStream(GRefPtr<GstStream>&& stream)
+ {
+-    g_clear_signal_handler(&m_streamTagsNotifyHandlerId, m_stream.get());
+-    g_clear_signal_handler(&m_streamCapsNotifyHandlerId, m_stream.get());
++    if (m_stream.get() != nullptr && m_streamTagsNotifyHandlerId != 0) {
++        g_signal_handler_disconnect (m_stream.get(), m_streamTagsNotifyHandlerId);
++        m_streamTagsNotifyHandlerId = 0;
++    }
++    if (m_stream.get() != nullptr && m_streamCapsNotifyHandlerId != 0) {
++        g_signal_handler_disconnect (m_stream.get(), m_streamCapsNotifyHandlerId);
++        m_streamCapsNotifyHandlerId = 0;
++    }
+     m_stream = WTF::move(stream);
+     m_streamTagsNotifyHandlerId = g_signal_connect_data(m_stream.get(), "notify::tags", G_CALLBACK(+[](GstStream*, GParamSpec*, gpointer userData) {
+         RefPtr holder = reinterpret_cast<ThreadSafeWeakPtr<TrackDataHolder>*>(userData)->get();
+@@ -302,8 +314,14 @@ void TrackDataHolder::disconnect()
+     m_taskQueue.startAborting();
+ 
+     if (m_stream) {
+-        g_clear_signal_handler(&m_streamTagsNotifyHandlerId, m_stream.get());
+-        g_clear_signal_handler(&m_streamCapsNotifyHandlerId, m_stream.get());
++        if (m_stream.get() != nullptr && m_streamTagsNotifyHandlerId != 0) {
++            g_signal_handler_disconnect (m_stream.get(), m_streamTagsNotifyHandlerId);
++            m_streamTagsNotifyHandlerId = 0;
++        }
++        if (m_stream.get() != nullptr && m_streamCapsNotifyHandlerId != 0) {
++            g_signal_handler_disconnect (m_stream.get(), m_streamCapsNotifyHandlerId);
++            m_streamCapsNotifyHandlerId = 0;
++        }
+         m_stream.clear();
+     }
+ 
+@@ -318,8 +336,14 @@ void TrackDataHolder::disconnect()
+     }
+ 
+     if (m_pad) {
+-        g_clear_signal_handler(&m_padTagsNotifyHandlerId, m_pad.get());
+-        g_clear_signal_handler(&m_padCapsNotifyHandlerId, m_pad.get());
++        if (m_pad.get() != nullptr && m_padTagsNotifyHandlerId != 0) {
++            g_signal_handler_disconnect (m_pad.get(), m_padTagsNotifyHandlerId);
++            m_padTagsNotifyHandlerId = 0;
++        }
++        if (m_pad.get() != nullptr && m_padCapsNotifyHandlerId != 0) {
++            g_signal_handler_disconnect (m_pad.get(), m_padCapsNotifyHandlerId);
++            m_padCapsNotifyHandlerId = 0;
++        }
+         m_pad.clear();
+     }
+ 
 diff --git a/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp b/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
-index fb5773d56767..bc10fda05f78 100644
+index fb5773d..bc10fda 100644
 --- a/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
 @@ -73,9 +73,11 @@ CertificateInfo CertificateInfo::isolatedCopy() const
@@ -211,7 +284,7 @@ index fb5773d56767..bc10fda05f78 100644
  
  } // namespace WebCore
 diff --git a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
-index 5ecfdc770d9b..38911a681028 100644
+index 5ecfdc7..38911a6 100644
 --- a/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
 +++ b/Source/WebKit/NetworkProcess/glib/DNSCache.cpp
 @@ -50,9 +50,17 @@ DNSCache::DNSCacheMap& DNSCache::mapForType(Type type)
@@ -254,7 +327,7 @@ index 5ecfdc770d9b..38911a681028 100644
  
  } // namespace WebKit
 diff --git a/Source/WebKit/NetworkProcess/glib/DNSCache.h b/Source/WebKit/NetworkProcess/glib/DNSCache.h
-index 30332200b7ec..f0b6ac73389b 100644
+index 3033220..f0b6ac7 100644
 --- a/Source/WebKit/NetworkProcess/glib/DNSCache.h
 +++ b/Source/WebKit/NetworkProcess/glib/DNSCache.h
 @@ -64,8 +64,10 @@ private:
@@ -269,7 +342,7 @@ index 30332200b7ec..f0b6ac73389b 100644
  };
  
 diff --git a/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp b/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
-index 27399475ab7a..10f189484a2f 100644
+index 2739947..10f1894 100644
 --- a/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
 +++ b/Source/WebKit/NetworkProcess/glib/WebKitCachedResolver.cpp
 @@ -67,7 +67,9 @@ static Vector<GRefPtr<GInetAddress>> addressListGListToVector(GList* addressList
@@ -311,7 +384,7 @@ index 27399475ab7a..10f189484a2f 100644
      resolverClass->lookup_by_address_async = webkitCachedResolverLookupByAddressAsync;
      resolverClass->lookup_by_address_finish = webkitCachedResolverLookupByAddressFinish;
 diff --git a/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp b/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
-index c09d90cbd1dc..76a9ae84fb7e 100644
+index c09d90c..76a9ae8 100644
 --- a/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
 +++ b/Source/WebKit/NetworkProcess/glib/WebKitOverridingResolver.cpp
 @@ -90,6 +90,7 @@ static GList* webkitOverridingResolverLookupByNameFinish(GResolver* resolver, GA
@@ -343,10 +416,10 @@ index c09d90cbd1dc..76a9ae84fb7e 100644
      resolverClass->lookup_by_address_async = webkitOverridingResolverLookupByAddressAsync;
      resolverClass->lookup_by_address_finish = webkitOverridingResolverLookupByAddressFinish;
 diff --git a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-index 6112a107f99a..b569c48de5ba 100644
+index 6637fc5..43d529f 100644
 --- a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 +++ b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-@@ -121,11 +121,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
+@@ -123,11 +123,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
  
      encoder << certificatesData;
  
@@ -360,7 +433,7 @@ index 6112a107f99a..b569c48de5ba 100644
  }
  
  std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>::decode(Decoder& decoder)
-@@ -138,6 +140,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
+@@ -140,6 +142,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
      if (!certificatesData->size())
          return GRefPtr<GTlsCertificate>();
  
@@ -368,7 +441,7 @@ index 6112a107f99a..b569c48de5ba 100644
      std::optional<GRefPtr<GByteArray>> privateKey;
      decoder >> privateKey;
      if (!privateKey) [[unlikely]]
-@@ -147,6 +150,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
+@@ -149,6 +152,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
      decoder >> privateKeyPKCS11Uri;
      if (!privateKeyPKCS11Uri) [[unlikely]]
          return std::nullopt;
@@ -376,7 +449,7 @@ index 6112a107f99a..b569c48de5ba 100644
  
      GType certificateType = g_tls_backend_get_certificate_type(g_tls_backend_get_default());
      GRefPtr<GTlsCertificate> certificate;
-@@ -157,8 +161,10 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
+@@ -159,8 +163,10 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
              certificateType, nullptr, nullptr,
              "certificate", certificateData.get(),
              "issuer", issuer,
@@ -388,7 +461,7 @@ index 6112a107f99a..b569c48de5ba 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 94fc72774189..9c699e416486 100644
+index e223190..b83e499 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
 @@ -11,7 +11,7 @@ set(ENABLE_UNSAFE_BUFFER_USAGE_WARNING ON)
@@ -413,7 +486,7 @@ index 94fc72774189..9c699e416486 100644
      find_package(Manette 0.2.4)
      if (NOT Manette_FOUND)
 diff --git a/Tools/MiniBrowser/gtk/BrowserSettingsDialog.c b/Tools/MiniBrowser/gtk/BrowserSettingsDialog.c
-index ef000cd2b910..432c97257048 100644
+index ef000cd..432c972 100644
 --- a/Tools/MiniBrowser/gtk/BrowserSettingsDialog.c
 +++ b/Tools/MiniBrowser/gtk/BrowserSettingsDialog.c
 @@ -175,11 +175,12 @@ static void featureTreeViewRenderStatusData(GtkTreeViewColumn *column, GtkCellRe
@@ -431,7 +504,7 @@ index ef000cd2b910..432c97257048 100644
  
  static void featureTreeViewRenderCategoryData(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 diff --git a/Tools/MiniBrowser/gtk/main.c b/Tools/MiniBrowser/gtk/main.c
-index d3fbb968ee46..4f49ad82f9fd 100644
+index d3fbb96..4f49ad8 100644
 --- a/Tools/MiniBrowser/gtk/main.c
 +++ b/Tools/MiniBrowser/gtk/main.c
 @@ -266,7 +266,7 @@ static gboolean parseFeaturesOptionCallback(const gchar *option, const gchar *va
@@ -452,5 +525,5 @@ index d3fbb968ee46..4f49ad82f9fd 100644
      }
  
 -- 
-2.54.0
+2.55.0
 
