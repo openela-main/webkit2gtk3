@@ -1,336 +1,12 @@
-From 5c35654f5d6f27ba74668d708b943cf58d461905 Mon Sep 17 00:00:00 2001
-From: Michael Catanzaro <mcatanzaro@gnome.org>
-Date: Mon, 6 Apr 2026 13:29:22 -0500
-Subject: [PATCH 1/2] Revert "[CMake] Use imported targets in the libsoup
- find-module"
+From fd42eeb4cf594a6d2f76d3af02ac604b12bc6fd0 Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Fri, 17 Jul 2026 09:43:43 +0200
+Subject: [PATCH] libsoup2 support
 
-This reverts commit d543d84262845ff88577c8fc6bdc8baf64edec51.
----
- Source/WebCore/platform/Soup.cmake      |   8 +-
- Source/WebDriver/PlatformGTK.cmake      |   9 ++-
- Source/WebKit/PlatformGTK.cmake         |   1 +
- Source/cmake/FindLibSoup.cmake          |  67 ++++++++++++++++
- Source/cmake/FindSoup3.cmake            | 100 ------------------------
- Tools/MiniBrowser/gtk/CMakeLists.txt    |   7 ++
- Tools/TestWebKitAPI/PlatformGTK.cmake   |   2 +
- Tools/TestWebKitAPI/glib/CMakeLists.txt |   4 +-
- 8 files changed, 95 insertions(+), 103 deletions(-)
- create mode 100644 Source/cmake/FindLibSoup.cmake
- delete mode 100644 Source/cmake/FindSoup3.cmake
-
-diff --git a/Source/WebCore/platform/Soup.cmake b/Source/WebCore/platform/Soup.cmake
-index aec21d344da1..1280075b2eac 100644
---- a/Source/WebCore/platform/Soup.cmake
-+++ b/Source/WebCore/platform/Soup.cmake
-@@ -19,4 +19,10 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
-     platform/network/soup/URLSoup.h
- )
- 
--list(APPEND WebCore_LIBRARIES Soup3::Soup3)
-+list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-+    ${LIBSOUP_INCLUDE_DIRS}
-+)
-+
-+list(APPEND WebCore_LIBRARIES
-+    ${LIBSOUP_LIBRARIES}
-+)
-diff --git a/Source/WebDriver/PlatformGTK.cmake b/Source/WebDriver/PlatformGTK.cmake
-index fe7f5f864c28..ee960b85aabe 100644
---- a/Source/WebDriver/PlatformGTK.cmake
-+++ b/Source/WebDriver/PlatformGTK.cmake
-@@ -2,6 +2,11 @@ set(WebDriver_OUTPUT_NAME WebKitWebDriver)
- 
- add_definitions(-DLIBEXECDIR="${CMAKE_INSTALL_FULL_LIBEXECDIR}")
- 
-+list(APPEND WebDriver_SYSTEM_INCLUDE_DIRECTORIES
-+    "${GLIB_INCLUDE_DIRS}"
-+    "${LIBSOUP_INCLUDE_DIRS}"
-+)
-+
- list(APPEND WebDriver_SOURCES
-     glib/SessionHostGlib.cpp
-     glib/WebDriverServiceGLib.cpp
-@@ -17,4 +22,6 @@ if (ENABLE_WEBDRIVER_BIDI)
-     list(APPEND WebDriver_SOURCES soup/WebSocketServerSoup.cpp)
- endif ()
- 
--list(APPEND WebDriver_LIBRARIES Soup3::Soup3)
-+list(APPEND WebDriver_LIBRARIES
-+    ${LIBSOUP_LIBRARIES}
-+)
-diff --git a/Source/WebKit/PlatformGTK.cmake b/Source/WebKit/PlatformGTK.cmake
-index 1985f6a66df2..9c2217af158e 100644
---- a/Source/WebKit/PlatformGTK.cmake
-+++ b/Source/WebKit/PlatformGTK.cmake
-@@ -341,6 +341,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
- list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
-     ${GSTREAMER_INCLUDE_DIRS}
-     ${GSTREAMER_PBUTILS_INCLUDE_DIRS}
-+    ${LIBSOUP_INCLUDE_DIRS}
- )
- 
- list(APPEND WebKit_INTERFACE_INCLUDE_DIRECTORIES
-diff --git a/Source/cmake/FindLibSoup.cmake b/Source/cmake/FindLibSoup.cmake
-new file mode 100644
-index 000000000000..cfc236b1496a
---- /dev/null
-+++ b/Source/cmake/FindLibSoup.cmake
-@@ -0,0 +1,67 @@
-+# - Try to find LibSoup 2.4
-+# This module defines the following variables:
-+#
-+#  LIBSOUP_FOUND - LibSoup 2.4 was found
-+#  LIBSOUP_INCLUDE_DIRS - the LibSoup 2.4 include directories
-+#  LIBSOUP_LIBRARIES - link these to use LibSoup 2.4
-+#
-+# Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
-+#
-+# Redistribution and use in source and binary forms, with or without
-+# modification, are permitted provided that the following conditions
-+# are met:
-+# 1.  Redistributions of source code must retain the above copyright
-+#     notice, this list of conditions and the following disclaimer.
-+# 2.  Redistributions in binary form must reproduce the above copyright
-+#     notice, this list of conditions and the following disclaimer in the
-+#     documentation and/or other materials provided with the distribution.
-+#
-+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND ITS CONTRIBUTORS ``AS
-+# IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR ITS
-+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+
-+if (NOT DEFINED LibSoup_FIND_VERSION)
-+    message(FATAL_ERROR "No LibSoup version specified")
-+endif ()
-+
-+if (LibSoup_FIND_VERSION VERSION_LESS 2.91)
-+    set(LIBSOUP_API_VERSION "2.4")
-+else ()
-+    set(LIBSOUP_API_VERSION "3.0")
-+endif ()
-+
-+# LibSoup does not provide an easy way to retrieve its version other than its
-+# .pc file, so we need to rely on PC_LIBSOUP_VERSION and REQUIRE the .pc file
-+# to be found.
-+find_package(PkgConfig QUIET)
-+pkg_check_modules(PC_LIBSOUP QUIET "libsoup-${LIBSOUP_API_VERSION}")
-+
-+find_path(LIBSOUP_INCLUDE_DIRS
-+    NAMES libsoup/soup.h
-+    HINTS ${PC_LIBSOUP_INCLUDEDIR}
-+          ${PC_LIBSOUP_INCLUDE_DIRS}
-+    PATH_SUFFIXES "libsoup-${LIBSOUP_API_VERSION}"
-+)
-+
-+find_library(LIBSOUP_LIBRARIES
-+    NAMES "soup-${LIBSOUP_API_VERSION}"
-+    HINTS ${PC_LIBSOUP_LIBDIR}
-+          ${PC_LIBSOUP_LIBRARY_DIRS}
-+)
-+
-+include(FindPackageHandleStandardArgs)
-+FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibSoup REQUIRED_VARS LIBSOUP_INCLUDE_DIRS LIBSOUP_LIBRARIES
-+                                          VERSION_VAR   PC_LIBSOUP_VERSION)
-+
-+mark_as_advanced(
-+    LIBSOUP_INCLUDE_DIRS
-+    LIBSOUP_LIBRARIES
-+)
-diff --git a/Source/cmake/FindSoup3.cmake b/Source/cmake/FindSoup3.cmake
-deleted file mode 100644
-index 85c5db4b2015..000000000000
---- a/Source/cmake/FindSoup3.cmake
-+++ /dev/null
-@@ -1,100 +0,0 @@
--# Copyright (C) 2025 Igalia S.L.
--# Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
--#
--# Redistribution and use in source and binary forms, with or without
--# modification, are permitted provided that the following conditions
--# are met:
--# 1.  Redistributions of source code must retain the above copyright
--#     notice, this list of conditions and the following disclaimer.
--# 2.  Redistributions in binary form must reproduce the above copyright
--#     notice, this list of conditions and the following disclaimer in the
--#     documentation and/or other materials provided with the distribution.
--#
--# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND ITS CONTRIBUTORS ``AS
--# IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
--# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
--# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR ITS
--# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
--# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
--# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
--# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
--# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
--# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
--# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
--
--#[=======================================================================[.rst:
--FindSoup3
-----------
--
--Find the libsoup 3 headers and libraries.
--
--Imported Targets
--^^^^^^^^^^^^^^^^
--
--``Soup3::Soup3``
--  The libsoup 3 library, if found.
--
--Result Variables
--^^^^^^^^^^^^^^^^
--
--This will define the following variables in your project:
--
--``Soup3_FOUND``
--  true if (the requested version of) libsoup 3 is available.
--``Soup3_VERSION``
--  Version of libsoup 3.
--
--#]=======================================================================]
--
--find_package(PkgConfig QUIET)
--pkg_check_modules(PC_Soup3 QUIET libsoup-3.0)
--set(Soup3_COMPILE_OPTIONS ${PC_Soup3_CFLAGS_OTHER})
--set(Soup3_VERSION ${PC_Soup3_VERSION})
--
--find_library(Soup3_LIBRARY
--    NAMES soup-3.0
--    HINTS ${PC_Soup3_LIBDIR}
--          ${PC_Soup3_LIBRARY_DIRS}
--)
--
--find_path(Soup3_INCLUDE_DIR
--    NAMES libsoup/soup.h
--    HINTS ${PC_Soup3_INCLUDEDIR}
--          ${PC_Soup3_INCLUDE_DIRS}
--    PATH_SUFFIXES libsoup-3.0
--)
--
--if (Soup3_INCLUDE_DIR AND NOT Soup3_VERSION AND EXISTS "${Soup3_INCLUDE_DIR}/libsoup/soup-version.h")
--    file(READ "${Soup3_INCLUDE_DIR}/libsoup/soup-version.h" Soup3_VERSION_CONTENT)
--
--    string(REGEX MATCH "#define[\t ]+SOUP_MAJOR_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
--    set(Soup3_VERSION_MAJOR "${CMAKE_MATCH_1}")
--
--    string(REGEX MATCH "#define[\t ]+SOUP_MINOR_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
--    set(Soup3_VERSION_MINOR "${CMAKE_MATCH_1}")
--
--    string(REGEX MATCH "#define[\t ]+SOUP_MICRO_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
--    set(Soup3_VERSION_MICRO "${CMAKE_MATCH_1}")
--
--    set(Soup3_VERSION "${Soup3_VERSION_MAJOR}.${Soup3_VERSION_MINOR}.${Soup3_VERSION_MICRO}")
--endif ()
--
--include(FindPackageHandleStandardArgs)
--find_package_handle_standard_args(Soup3
--    REQUIRED_VARS Soup3_LIBRARY Soup3_INCLUDE_DIR
--    VERSION_VAR Soup3_VERSION
--)
--
--if (Soup3_LIBRARY AND NOT TARGET Soup3::Soup3)
--    add_library(Soup3::Soup3 UNKNOWN IMPORTED GLOBAL)
--    set_target_properties(Soup3::Soup3 PROPERTIES
--        IMPORTED_LOCATION "${Soup3_LIBRARY}"
--        INTERFACE_COMPILE_OPTIONS "${Soup3_COMPILE_OPTIONS}"
--        INTERFACE_INCLUDE_DIRECTORIES "${Soup3_INCLUDE_DIR}"
--    )
--endif ()
--
--mark_as_advanced(
--    Soup3_INCLUDE_DIR
--    Soup3_LIBRARY
--)
-diff --git a/Tools/MiniBrowser/gtk/CMakeLists.txt b/Tools/MiniBrowser/gtk/CMakeLists.txt
-index d3ecfb882422..4acc6c8458d3 100644
---- a/Tools/MiniBrowser/gtk/CMakeLists.txt
-+++ b/Tools/MiniBrowser/gtk/CMakeLists.txt
-@@ -26,8 +26,15 @@ set(MiniBrowser_PRIVATE_INCLUDE_DIRECTORIES
-     ${CMAKE_SOURCE_DIR}/Source
- )
- 
-+set(MiniBrowser_SYSTEM_INCLUDE_DIRECTORIES
-+    ${GLIB_INCLUDE_DIRS}
-+    ${LIBSOUP_INCLUDE_DIRS}
-+)
-+
- set(MiniBrowser_PRIVATE_LIBRARIES
-+    ${GLIB_LIBRARIES}
-     ${JavaScriptCore_LIBRARY_NAME}
-+    ${LIBSOUP_LIBRARIES}
-     GTK::GTK
-     WebKit::WebKit
- )
-diff --git a/Tools/TestWebKitAPI/PlatformGTK.cmake b/Tools/TestWebKitAPI/PlatformGTK.cmake
-index 957aef111692..ba1be041abca 100644
---- a/Tools/TestWebKitAPI/PlatformGTK.cmake
-+++ b/Tools/TestWebKitAPI/PlatformGTK.cmake
-@@ -52,10 +52,12 @@ list(APPEND TestWebCore_SOURCES
- )
- 
- list(APPEND TestWebCore_SYSTEM_INCLUDE_DIRECTORIES
-+    ${GLIB_INCLUDE_DIRS}
-     ${GSTREAMER_INCLUDE_DIRS}
-     ${GSTREAMER_AUDIO_INCLUDE_DIRS}
-     ${GSTREAMER_PBUTILS_INCLUDE_DIRS}
-     ${GSTREAMER_VIDEO_INCLUDE_DIRS}
-+    ${LIBSOUP_INCLUDE_DIRS}
- )
- 
- list(APPEND TestWebCore_LIBRARIES
-diff --git a/Tools/TestWebKitAPI/glib/CMakeLists.txt b/Tools/TestWebKitAPI/glib/CMakeLists.txt
-index f981707b11dc..6a5b4d3bda61 100644
---- a/Tools/TestWebKitAPI/glib/CMakeLists.txt
-+++ b/Tools/TestWebKitAPI/glib/CMakeLists.txt
-@@ -33,6 +33,7 @@ endif ()
- set(WebKitGLibAPITests_SYSTEM_INCLUDE_DIRECTORIES
-     ${GSTREAMER_AUDIO_INCLUDE_DIRS}
-     ${GSTREAMER_INCLUDE_DIRS}
-+    ${LIBSOUP_INCLUDE_DIRS}
- )
- 
- set(WebKitAPITest_LIBRARIES
-@@ -44,8 +45,8 @@ set(WebKitGLibAPITestsCore_LIBRARIES
- )
- 
- set(WebKitGLibAPITest_LIBRARIES
-+    ${LIBSOUP_LIBRARIES}
-     ${WebKitAPITest_LIBRARIES}
--    Soup3::Soup3
-     WebKitGLibAPITestsCore
- )
- 
-@@ -203,6 +204,7 @@ if (PORT STREQUAL "WPE" AND ENABLE_WPE_QT_API)
-         ${CMAKE_BINARY_DIR}
-         ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}
-         ${JavaScriptCoreGLib_FRAMEWORK_HEADERS_DIR}
-+        ${LIBSOUP_INCLUDE_DIRS}
-         ${TOOLS_DIR}/TestWebKitAPI
-         ${WEBKIT_DIR}/WPEPlatform
-         ${WPEPlatform_DERIVED_SOURCES_DIR}
--- 
-2.54.0
-
-
-From e834e17e29170111af19ce2d4f5e6b5a963b2170 Mon Sep 17 00:00:00 2001
-From: Michael Catanzaro <mcatanzaro@gnome.org>
-Date: Mon, 6 Apr 2026 13:26:24 -0500
-Subject: [PATCH 2/2] Revert "[GTK] Remove support for building against
- libsoup2"
-
-This reverts commit 6153cafaf3bd0db47a50f088e752e73a39d40921.
 ---
  Source/WTF/wtf/Platform.h                     |   4 +
  Source/WTF/wtf/PlatformEnableGlib.h           |   4 -
- Source/WebCore/platform/Soup.cmake            |   1 +
+ Source/WebCore/platform/Soup.cmake            |   9 +-
  .../network/soup/AuthenticationChallenge.h    |   6 +
  .../soup/AuthenticationChallengeSoup.cpp      |  14 +
  .../platform/network/soup/CookieSoup.cpp      |  32 ++-
@@ -344,18 +20,23 @@ This reverts commit 6153cafaf3bd0db47a50f088e752e73a39d40921.
  .../platform/network/soup/SoupVersioning.h    | 168 +++++++++++
  .../WebCore/platform/network/soup/URLSoup.cpp |  32 +++
  .../WebCore/platform/network/soup/URLSoup.h   |   5 +
+ Source/WebDriver/PlatformGTK.cmake            |   9 +-
  Source/WebDriver/soup/HTTPServerSoup.cpp      |  20 ++
  Source/WebDriver/soup/WebSocketServerSoup.cpp |  26 ++
  .../soup/NetworkDataTaskSoup.cpp              | 260 +++++++++++++++++-
  .../NetworkProcess/soup/NetworkDataTaskSoup.h |  31 +++
  .../soup/NetworkSessionSoup.cpp               |  26 ++
  .../NetworkProcess/soup/WebSocketTaskSoup.cpp |  31 ++-
- Source/WebKit/PlatformGTK.cmake               |   4 +-
+ Source/WebKit/PlatformGTK.cmake               |   5 +-
  .../glib/RemoteInspectorHTTPServer.cpp        |  13 +
  .../gtk/webkitgtk-web-process-extension.pc.in |   2 +-
  Source/WebKit/gtk/webkitgtk.pc.in             |   2 +-
+ Source/cmake/FindLibSoup.cmake                |  67 +++++
+ Source/cmake/FindSoup3.cmake                  | 100 -------
  Source/cmake/OptionsGTK.cmake                 |  31 ++-
  Source/cmake/WebKitFeatures.cmake             |   1 +
+ Tools/MiniBrowser/gtk/CMakeLists.txt          |   7 +
+ Tools/TestWebKitAPI/PlatformGTK.cmake         |   2 +
  .../Tests/WebKitGLib/TestAuthentication.cpp   |  45 +++
  .../Tests/WebKitGLib/TestBackForwardList.cpp  |   5 +
  .../Tests/WebKitGLib/TestCookieManager.cpp    |   9 +
@@ -373,13 +54,16 @@ This reverts commit 6153cafaf3bd0db47a50f088e752e73a39d40921.
  .../Tests/WebKitGLib/TestWebKitWebXR.cpp      |   4 +
  .../Tests/WebKitGLib/TestWebsiteData.cpp      |  11 +
  .../Tests/WebKitGtk/TestContextMenu.cpp       |   9 +
+ Tools/TestWebKitAPI/glib/CMakeLists.txt       |   4 +-
  .../glib/WebKitGLib/WebKitTestServer.cpp      |   6 +
  .../glib/WebKitGLib/WebKitTestServer.h        |   4 +
- 47 files changed, 1051 insertions(+), 15 deletions(-)
+ 53 files changed, 1146 insertions(+), 118 deletions(-)
  create mode 100644 Source/WebCore/platform/network/soup/SoupVersioning.h
+ create mode 100644 Source/cmake/FindLibSoup.cmake
+ delete mode 100644 Source/cmake/FindSoup3.cmake
 
 diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
-index 0c3ba74482f6..b81fc91c687a 100644
+index 0c3ba74..b81fc91 100644
 --- a/Source/WTF/wtf/Platform.h
 +++ b/Source/WTF/wtf/Platform.h
 @@ -104,8 +104,12 @@
@@ -396,7 +80,7 @@ index 0c3ba74482f6..b81fc91c687a 100644
  #if PLATFORM(COCOA)
  /* Cocoa defines a series of platform macros for debugging. */
 diff --git a/Source/WTF/wtf/PlatformEnableGlib.h b/Source/WTF/wtf/PlatformEnableGlib.h
-index a50993596280..0faf3134ae84 100644
+index a509935..0faf313 100644
 --- a/Source/WTF/wtf/PlatformEnableGlib.h
 +++ b/Source/WTF/wtf/PlatformEnableGlib.h
 @@ -55,10 +55,6 @@
@@ -411,10 +95,10 @@ index a50993596280..0faf3134ae84 100644
  #define ENABLE_SCROLLING_THREAD 1
  #endif
 diff --git a/Source/WebCore/platform/Soup.cmake b/Source/WebCore/platform/Soup.cmake
-index 1280075b2eac..8ea3b022bb3e 100644
+index aec21d3..8ea3b02 100644
 --- a/Source/WebCore/platform/Soup.cmake
 +++ b/Source/WebCore/platform/Soup.cmake
-@@ -16,6 +16,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+@@ -16,7 +16,14 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
      platform/network/soup/ResourceResponse.h
      platform/network/soup/SoupNetworkProxySettings.h
      platform/network/soup/SoupNetworkSession.h
@@ -422,8 +106,16 @@ index 1280075b2eac..8ea3b022bb3e 100644
      platform/network/soup/URLSoup.h
  )
  
+-list(APPEND WebCore_LIBRARIES Soup3::Soup3)
++list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
++    ${LIBSOUP_INCLUDE_DIRS}
++)
++
++list(APPEND WebCore_LIBRARIES
++    ${LIBSOUP_LIBRARIES}
++)
 diff --git a/Source/WebCore/platform/network/soup/AuthenticationChallenge.h b/Source/WebCore/platform/network/soup/AuthenticationChallenge.h
-index e6a6b94e5010..c2183b06cd83 100644
+index e6a6b94..c2183b0 100644
 --- a/Source/WebCore/platform/network/soup/AuthenticationChallenge.h
 +++ b/Source/WebCore/platform/network/soup/AuthenticationChallenge.h
 @@ -56,6 +56,9 @@ public:
@@ -447,7 +139,7 @@ index e6a6b94e5010..c2183b06cd83 100644
      GRefPtr<GTlsPassword> m_tlsPassword;
      uint32_t m_tlsPasswordFlags { 0 };
 diff --git a/Source/WebCore/platform/network/soup/AuthenticationChallengeSoup.cpp b/Source/WebCore/platform/network/soup/AuthenticationChallengeSoup.cpp
-index 7ea935d22bd9..c717860d54f3 100644
+index 7ea935d..c717860 100644
 --- a/Source/WebCore/platform/network/soup/AuthenticationChallengeSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/AuthenticationChallengeSoup.cpp
 @@ -62,9 +62,16 @@ static ProtectionSpace protectionSpaceFromSoupAuthAndURL(SoupAuth* soupAuth, con
@@ -489,7 +181,7 @@ index 7ea935d22bd9..c717860d54f3 100644
  }
  
 diff --git a/Source/WebCore/platform/network/soup/CookieSoup.cpp b/Source/WebCore/platform/network/soup/CookieSoup.cpp
-index ce2a688eb3fc..9bb9c7124d40 100644
+index ce2a688..9bb9c71 100644
 --- a/Source/WebCore/platform/network/soup/CookieSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/CookieSoup.cpp
 @@ -32,6 +32,7 @@
@@ -563,7 +255,7 @@ index ce2a688eb3fc..9bb9c7124d40 100644
  
      return soupCookie;
 diff --git a/Source/WebCore/platform/network/soup/GUniquePtrSoup.h b/Source/WebCore/platform/network/soup/GUniquePtrSoup.h
-index 843b56c646bd..6bbe61e05e6a 100644
+index 843b56c..6bbe61e 100644
 --- a/Source/WebCore/platform/network/soup/GUniquePtrSoup.h
 +++ b/Source/WebCore/platform/network/soup/GUniquePtrSoup.h
 @@ -29,8 +29,17 @@
@@ -585,7 +277,7 @@ index 843b56c646bd..6bbe61e05e6a 100644
  } // namespace WTF
  
 diff --git a/Source/WebCore/platform/network/soup/NetworkStorageSessionSoup.cpp b/Source/WebCore/platform/network/soup/NetworkStorageSessionSoup.cpp
-index a2a6da86c7d9..a5cbe1c7d4b4 100644
+index 40b131d..3df89ca 100644
 --- a/Source/WebCore/platform/network/soup/NetworkStorageSessionSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/NetworkStorageSessionSoup.cpp
 @@ -353,8 +353,12 @@ void NetworkStorageSession::setCookieAcceptPolicy(HTTPCookieAcceptPolicy policy)
@@ -683,7 +375,7 @@ index a2a6da86c7d9..a5cbe1c7d4b4 100644
          return nullptr;
  
 diff --git a/Source/WebCore/platform/network/soup/ResourceErrorSoup.cpp b/Source/WebCore/platform/network/soup/ResourceErrorSoup.cpp
-index efb31f2c864d..db0725eddd21 100644
+index efb31f2..db0725e 100644
 --- a/Source/WebCore/platform/network/soup/ResourceErrorSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/ResourceErrorSoup.cpp
 @@ -36,6 +36,12 @@
@@ -731,7 +423,7 @@ index efb31f2c864d..db0725eddd21 100644
  
  ResourceError ResourceError::genericGError(const URL& failingURL, GError* error)
 diff --git a/Source/WebCore/platform/network/soup/ResourceRequest.h b/Source/WebCore/platform/network/soup/ResourceRequest.h
-index 98e8c082c695..ab7ed161b9f7 100644
+index 98e8c08..ab7ed16 100644
 --- a/Source/WebCore/platform/network/soup/ResourceRequest.h
 +++ b/Source/WebCore/platform/network/soup/ResourceRequest.h
 @@ -101,7 +101,11 @@ public:
@@ -747,7 +439,7 @@ index 98e8c082c695..ab7ed161b9f7 100644
      void doUpdatePlatformRequest() { }
      void doUpdateResourceRequest() { }
 diff --git a/Source/WebCore/platform/network/soup/ResourceRequestSoup.cpp b/Source/WebCore/platform/network/soup/ResourceRequestSoup.cpp
-index bca32f9cb362..fd8c094594c7 100644
+index bca32f9..fd8c094 100644
 --- a/Source/WebCore/platform/network/soup/ResourceRequestSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/ResourceRequestSoup.cpp
 @@ -29,6 +29,7 @@
@@ -848,7 +540,7 @@ index bca32f9cb362..fd8c094594c7 100644
  void ResourceRequest::updateFromDelegatePreservingOldProperties(const ResourceRequest& delegateProvidedRequest)
  {
 diff --git a/Source/WebCore/platform/network/soup/ResourceResponseSoup.cpp b/Source/WebCore/platform/network/soup/ResourceResponseSoup.cpp
-index 5aea30714a01..1ae165956629 100644
+index 5aea307..1ae1659 100644
 --- a/Source/WebCore/platform/network/soup/ResourceResponseSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/ResourceResponseSoup.cpp
 @@ -28,6 +28,7 @@
@@ -872,7 +564,7 @@ index 5aea30714a01..1ae165956629 100644
  
      m_httpStatusCode = soup_message_get_status(soupMessage);
 diff --git a/Source/WebCore/platform/network/soup/SoupNetworkSession.cpp b/Source/WebCore/platform/network/soup/SoupNetworkSession.cpp
-index 4ffd156d0275..70664cf1b41b 100644
+index 3d8241a..6eb42a2 100644
 --- a/Source/WebCore/platform/network/soup/SoupNetworkSession.cpp
 +++ b/Source/WebCore/platform/network/soup/SoupNetworkSession.cpp
 @@ -32,6 +32,7 @@
@@ -883,7 +575,7 @@ index 4ffd156d0275..70664cf1b41b 100644
  #include "WebKitAutoconfigProxyResolver.h"
  #include <glib/gstdio.h>
  #include <libsoup/soup.h>
-@@ -111,8 +112,12 @@ SoupNetworkSession::SoupNetworkSession(PAL::SessionID sessionID)
+@@ -120,8 +121,12 @@ SoupNetworkSession::SoupNetworkSession(PAL::SessionID sessionID)
  
      soup_session_add_feature_by_type(m_soupSession.get(), SOUP_TYPE_CONTENT_SNIFFER);
      soup_session_add_feature_by_type(m_soupSession.get(), SOUP_TYPE_AUTH_NTLM);
@@ -896,7 +588,7 @@ index 4ffd156d0275..70664cf1b41b 100644
  
      if (!initialAcceptLanguages().isNull())
          setAcceptLanguages(initialAcceptLanguages());
-@@ -149,7 +154,11 @@ void SoupNetworkSession::setupLogger()
+@@ -158,7 +163,11 @@ void SoupNetworkSession::setupLogger()
      if (LogNetwork.state != WTFLogChannelState::On || soup_session_get_feature(m_soupSession.get(), SOUP_TYPE_LOGGER))
          return;
  
@@ -908,7 +600,7 @@ index 4ffd156d0275..70664cf1b41b 100644
      soup_session_add_feature(m_soupSession.get(), SOUP_SESSION_FEATURE(logger.get()));
      soup_logger_set_printer(logger.get(), soupLogPrinter, nullptr, nullptr);
  #endif
-@@ -172,6 +181,7 @@ void SoupNetworkSession::setHSTSPersistentStorage(const String& directory)
+@@ -181,6 +190,7 @@ void SoupNetworkSession::setHSTSPersistentStorage(const String& directory)
      if (m_sessionID.isEphemeral())
          return;
  
@@ -916,7 +608,7 @@ index 4ffd156d0275..70664cf1b41b 100644
      if (!FileSystem::makeAllDirectories(directory)) {
          RELEASE_LOG_ERROR(Network, "Unable to create the HSTS storage directory \"%s\". Using a memory enforcer instead.", directory.utf8().data());
          return;
-@@ -182,10 +192,14 @@ void SoupNetworkSession::setHSTSPersistentStorage(const String& directory)
+@@ -191,10 +201,14 @@ void SoupNetworkSession::setHSTSPersistentStorage(const String& directory)
      GRefPtr<SoupHSTSEnforcer> enforcer = adoptGRef(soup_hsts_enforcer_db_new(dbFilename.get()));
      soup_session_remove_feature_by_type(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER);
      soup_session_add_feature(m_soupSession.get(), SOUP_SESSION_FEATURE(enforcer.get()));
@@ -931,7 +623,7 @@ index 4ffd156d0275..70664cf1b41b 100644
      auto* enforcer = SOUP_HSTS_ENFORCER(soup_session_get_feature(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER));
      ASSERT(enforcer);
  
-@@ -194,10 +208,14 @@ void SoupNetworkSession::getHostNamesWithHSTSCache(HashSet<String>& hostNames)
+@@ -203,10 +217,14 @@ void SoupNetworkSession::getHostNamesWithHSTSCache(HashSet<String>& hostNames)
          GUniquePtr<gchar> domain(static_cast<gchar*>(iter->data));
          hostNames.add(String::fromUTF8(domain.get()));
      }
@@ -946,7 +638,7 @@ index 4ffd156d0275..70664cf1b41b 100644
      auto* enforcer = SOUP_HSTS_ENFORCER(soup_session_get_feature(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER));
      ASSERT(enforcer);
  
-@@ -205,22 +223,33 @@ void SoupNetworkSession::deleteHSTSCacheForHostNames(const Vector<String>& hostN
+@@ -214,22 +232,33 @@ void SoupNetworkSession::deleteHSTSCacheForHostNames(const Vector<String>& hostN
          GUniquePtr<SoupHSTSPolicy> policy(soup_hsts_policy_new(hostName.utf8().data(), SOUP_HSTS_POLICY_MAX_AGE_PAST, FALSE));
          soup_hsts_enforcer_set_policy(enforcer, policy.get());
      }
@@ -982,7 +674,7 @@ index 4ffd156d0275..70664cf1b41b 100644
  static inline bool stringIsNumeric(const std::string_view& str)
 diff --git a/Source/WebCore/platform/network/soup/SoupVersioning.h b/Source/WebCore/platform/network/soup/SoupVersioning.h
 new file mode 100644
-index 000000000000..4895e0c69900
+index 0000000..4895e0c
 --- /dev/null
 +++ b/Source/WebCore/platform/network/soup/SoupVersioning.h
 @@ -0,0 +1,168 @@
@@ -1155,7 +847,7 @@ index 000000000000..4895e0c69900
 +
 +#endif // USE(SOUP2)
 diff --git a/Source/WebCore/platform/network/soup/URLSoup.cpp b/Source/WebCore/platform/network/soup/URLSoup.cpp
-index 9b2f7b06c41e..351e52893399 100644
+index 9b2f7b0..351e528 100644
 --- a/Source/WebCore/platform/network/soup/URLSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/URLSoup.cpp
 @@ -30,6 +30,37 @@
@@ -1204,7 +896,7 @@ index 9b2f7b06c41e..351e52893399 100644
  
  } // namespace WebCore
 diff --git a/Source/WebCore/platform/network/soup/URLSoup.h b/Source/WebCore/platform/network/soup/URLSoup.h
-index ac87352f192c..64b62035235b 100644
+index ac87352..64b6203 100644
 --- a/Source/WebCore/platform/network/soup/URLSoup.h
 +++ b/Source/WebCore/platform/network/soup/URLSoup.h
 @@ -33,6 +33,11 @@ class URL;
@@ -1219,8 +911,32 @@ index ac87352f192c..64b62035235b 100644
  GRefPtr<GUri> urlToSoupURI(const URL&);
 +#endif
  } // namespace WebCore
+diff --git a/Source/WebDriver/PlatformGTK.cmake b/Source/WebDriver/PlatformGTK.cmake
+index fe7f5f8..ee960b8 100644
+--- a/Source/WebDriver/PlatformGTK.cmake
++++ b/Source/WebDriver/PlatformGTK.cmake
+@@ -2,6 +2,11 @@ set(WebDriver_OUTPUT_NAME WebKitWebDriver)
+ 
+ add_definitions(-DLIBEXECDIR="${CMAKE_INSTALL_FULL_LIBEXECDIR}")
+ 
++list(APPEND WebDriver_SYSTEM_INCLUDE_DIRECTORIES
++    "${GLIB_INCLUDE_DIRS}"
++    "${LIBSOUP_INCLUDE_DIRS}"
++)
++
+ list(APPEND WebDriver_SOURCES
+     glib/SessionHostGlib.cpp
+     glib/WebDriverServiceGLib.cpp
+@@ -17,4 +22,6 @@ if (ENABLE_WEBDRIVER_BIDI)
+     list(APPEND WebDriver_SOURCES soup/WebSocketServerSoup.cpp)
+ endif ()
+ 
+-list(APPEND WebDriver_LIBRARIES Soup3::Soup3)
++list(APPEND WebDriver_LIBRARIES
++    ${LIBSOUP_LIBRARIES}
++)
 diff --git a/Source/WebDriver/soup/HTTPServerSoup.cpp b/Source/WebDriver/soup/HTTPServerSoup.cpp
-index 86ac0010dcc9..45188492faf7 100644
+index 86ac001..4518849 100644
 --- a/Source/WebDriver/soup/HTTPServerSoup.cpp
 +++ b/Source/WebDriver/soup/HTTPServerSoup.cpp
 @@ -60,6 +60,25 @@ bool HTTPServer::listen(const std::optional<String>& host, unsigned port)
@@ -1258,7 +974,7 @@ index 86ac0010dcc9..45188492faf7 100644
      return true;
  }
 diff --git a/Source/WebDriver/soup/WebSocketServerSoup.cpp b/Source/WebDriver/soup/WebSocketServerSoup.cpp
-index 9bd92c8a4ce4..bb743aa45831 100644
+index 9bd92c8..bb743aa 100644
 --- a/Source/WebDriver/soup/WebSocketServerSoup.cpp
 +++ b/Source/WebDriver/soup/WebSocketServerSoup.cpp
 @@ -41,6 +41,8 @@
@@ -1341,7 +1057,7 @@ index 9bd92c8a4ce4..bb743aa45831 100644
  
  } // namespace WebDriver
 diff --git a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
-index 76fdb1c19f39..d2b8b2b27073 100644
+index 76fdb1c..d2b8b2b 100644
 --- a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
 +++ b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
 @@ -44,6 +44,7 @@
@@ -1939,7 +1655,7 @@ index 76fdb1c19f39..d2b8b2b27073 100644
  }
  
 diff --git a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.h b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.h
-index d88360a343c0..3f20fc786cd1 100644
+index d88360a..3f20fc7 100644
 --- a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.h
 +++ b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.h
 @@ -79,9 +79,15 @@ private:
@@ -2019,7 +1735,7 @@ index d88360a343c0..3f20fc786cd1 100644
      static void restartedCallback(SoupMessage*, NetworkDataTaskSoup*);
      void didRestart();
 diff --git a/Source/WebKit/NetworkProcess/soup/NetworkSessionSoup.cpp b/Source/WebKit/NetworkProcess/soup/NetworkSessionSoup.cpp
-index fffd039135be..4b9cc36b7f65 100644
+index fffd039..4b9cc36 100644
 --- a/Source/WebKit/NetworkProcess/soup/NetworkSessionSoup.cpp
 +++ b/Source/WebKit/NetworkProcess/soup/NetworkSessionSoup.cpp
 @@ -95,9 +95,31 @@ void NetworkSessionSoup::setCookiePersistentStorage(const String& storagePath, S
@@ -2072,7 +1788,7 @@ index fffd039135be..4b9cc36b7f65 100644
  
      bool shouldBlockCookies = checkedNetworkStorageSession()->shouldBlockCookies(request, frameID, pageID, networkProcess().shouldRelaxThirdPartyCookieBlockingForPage(webPageProxyID), WebCore::IsKnownCrossSiteTracker::No);
 diff --git a/Source/WebKit/NetworkProcess/soup/WebSocketTaskSoup.cpp b/Source/WebKit/NetworkProcess/soup/WebSocketTaskSoup.cpp
-index 667a9ab1a197..8917771f4e55 100644
+index 667a9ab..8917771 100644
 --- a/Source/WebKit/NetworkProcess/soup/WebSocketTaskSoup.cpp
 +++ b/Source/WebKit/NetworkProcess/soup/WebSocketTaskSoup.cpp
 @@ -33,6 +33,7 @@
@@ -2187,10 +1903,18 @@ index 667a9ab1a197..8917771f4e55 100644
      if (soup_websocket_connection_get_state(m_connection.get()) == SOUP_WEBSOCKET_STATE_OPEN)
          soup_websocket_connection_close(m_connection.get(), code, reason.utf8().data());
 diff --git a/Source/WebKit/PlatformGTK.cmake b/Source/WebKit/PlatformGTK.cmake
-index 9c2217af158e..47ffc9626f0d 100644
+index 1985f6a..47ffc96 100644
 --- a/Source/WebKit/PlatformGTK.cmake
 +++ b/Source/WebKit/PlatformGTK.cmake
-@@ -615,7 +615,7 @@ GI_INTROSPECT(WebKit${WEBKITGTK_API_INFIX} ${WEBKITGTK_API_VERSION} webkit${WEBK
+@@ -341,6 +341,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
+ list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
+     ${GSTREAMER_INCLUDE_DIRS}
+     ${GSTREAMER_PBUTILS_INCLUDE_DIRS}
++    ${LIBSOUP_INCLUDE_DIRS}
+ )
+ 
+ list(APPEND WebKit_INTERFACE_INCLUDE_DIRECTORIES
+@@ -614,7 +615,7 @@ GI_INTROSPECT(WebKit${WEBKITGTK_API_INFIX} ${WEBKITGTK_API_VERSION} webkit${WEBK
      DEPENDENCIES
          JavaScriptCore
          Gtk-${GTK_API_VERSION}.0:${GTK_PKGCONFIG_PACKAGE}
@@ -2199,7 +1923,7 @@ index 9c2217af158e..47ffc9626f0d 100644
      SOURCES
          ${WebKitGTK_INSTALLED_HEADERS}
          ${WEBKITGTK_SOURCES_FOR_INTROSPECTION}
-@@ -651,7 +651,7 @@ GI_INTROSPECT(${WEBKITGTK_WEB_PROCESS_EXTENSION_API_NAME} ${WEBKITGTK_API_VERSIO
+@@ -650,7 +651,7 @@ GI_INTROSPECT(${WEBKITGTK_WEB_PROCESS_EXTENSION_API_NAME} ${WEBKITGTK_API_VERSIO
      DEPENDENCIES
          JavaScriptCore
          Gtk-${GTK_API_VERSION}.0:${GTK_PKGCONFIG_PACKAGE}
@@ -2209,7 +1933,7 @@ index 9c2217af158e..47ffc9626f0d 100644
          ${WebKitDOM_SOURCES_FOR_INTROSPECTION}
          ${WebKitWebProcessExtension_INSTALLED_HEADERS}
 diff --git a/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp b/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
-index 75b2e7373b5d..601f58788871 100644
+index 75b2e73..601f587 100644
 --- a/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
 +++ b/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
 @@ -29,6 +29,7 @@
@@ -2257,7 +1981,7 @@ index 75b2e7373b5d..601f58788871 100644
  
  void RemoteInspectorHTTPServer::targetDidClose(uint64_t connectionID, uint64_t targetID)
 diff --git a/Source/WebKit/gtk/webkitgtk-web-process-extension.pc.in b/Source/WebKit/gtk/webkitgtk-web-process-extension.pc.in
-index f1d7cabb175f..9d066b5f484f 100644
+index f1d7cab..9d066b5 100644
 --- a/Source/WebKit/gtk/webkitgtk-web-process-extension.pc.in
 +++ b/Source/WebKit/gtk/webkitgtk-web-process-extension.pc.in
 @@ -8,6 +8,6 @@ Name: WebKitGTK web process extensions
@@ -2269,7 +1993,7 @@ index f1d7cabb175f..9d066b5f484f 100644
  Libs: -L${libdir} -lwebkit@WEBKITGTK_API_INFIX@gtk-@WEBKITGTK_API_VERSION@
  Cflags: -I${includedir}/webkitgtk-@WEBKITGTK_API_VERSION@
 diff --git a/Source/WebKit/gtk/webkitgtk.pc.in b/Source/WebKit/gtk/webkitgtk.pc.in
-index db0fb001f327..8d7c3e9d086d 100644
+index db0fb00..8d7c3e9 100644
 --- a/Source/WebKit/gtk/webkitgtk.pc.in
 +++ b/Source/WebKit/gtk/webkitgtk.pc.in
 @@ -8,6 +8,6 @@ Name: WebKitGTK
@@ -2280,8 +2004,187 @@ index db0fb001f327..8d7c3e9d086d 100644
 +Requires: glib-2.0 @GTK_PC_NAME@ libsoup-2.4 javascriptcoregtk-@WEBKITGTK_API_VERSION@
  Libs: -L${libdir} -lwebkit@WEBKITGTK_API_INFIX@gtk-@WEBKITGTK_API_VERSION@
  Cflags: -I${includedir}/webkitgtk-@WEBKITGTK_API_VERSION@
+diff --git a/Source/cmake/FindLibSoup.cmake b/Source/cmake/FindLibSoup.cmake
+new file mode 100644
+index 0000000..cfc236b
+--- /dev/null
++++ b/Source/cmake/FindLibSoup.cmake
+@@ -0,0 +1,67 @@
++# - Try to find LibSoup 2.4
++# This module defines the following variables:
++#
++#  LIBSOUP_FOUND - LibSoup 2.4 was found
++#  LIBSOUP_INCLUDE_DIRS - the LibSoup 2.4 include directories
++#  LIBSOUP_LIBRARIES - link these to use LibSoup 2.4
++#
++# Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++# 1.  Redistributions of source code must retain the above copyright
++#     notice, this list of conditions and the following disclaimer.
++# 2.  Redistributions in binary form must reproduce the above copyright
++#     notice, this list of conditions and the following disclaimer in the
++#     documentation and/or other materials provided with the distribution.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND ITS CONTRIBUTORS ``AS
++# IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
++# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR ITS
++# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
++# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
++# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
++# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
++# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
++# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++if (NOT DEFINED LibSoup_FIND_VERSION)
++    message(FATAL_ERROR "No LibSoup version specified")
++endif ()
++
++if (LibSoup_FIND_VERSION VERSION_LESS 2.91)
++    set(LIBSOUP_API_VERSION "2.4")
++else ()
++    set(LIBSOUP_API_VERSION "3.0")
++endif ()
++
++# LibSoup does not provide an easy way to retrieve its version other than its
++# .pc file, so we need to rely on PC_LIBSOUP_VERSION and REQUIRE the .pc file
++# to be found.
++find_package(PkgConfig QUIET)
++pkg_check_modules(PC_LIBSOUP QUIET "libsoup-${LIBSOUP_API_VERSION}")
++
++find_path(LIBSOUP_INCLUDE_DIRS
++    NAMES libsoup/soup.h
++    HINTS ${PC_LIBSOUP_INCLUDEDIR}
++          ${PC_LIBSOUP_INCLUDE_DIRS}
++    PATH_SUFFIXES "libsoup-${LIBSOUP_API_VERSION}"
++)
++
++find_library(LIBSOUP_LIBRARIES
++    NAMES "soup-${LIBSOUP_API_VERSION}"
++    HINTS ${PC_LIBSOUP_LIBDIR}
++          ${PC_LIBSOUP_LIBRARY_DIRS}
++)
++
++include(FindPackageHandleStandardArgs)
++FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibSoup REQUIRED_VARS LIBSOUP_INCLUDE_DIRS LIBSOUP_LIBRARIES
++                                          VERSION_VAR   PC_LIBSOUP_VERSION)
++
++mark_as_advanced(
++    LIBSOUP_INCLUDE_DIRS
++    LIBSOUP_LIBRARIES
++)
+diff --git a/Source/cmake/FindSoup3.cmake b/Source/cmake/FindSoup3.cmake
+deleted file mode 100644
+index 85c5db4..0000000
+--- a/Source/cmake/FindSoup3.cmake
++++ /dev/null
+@@ -1,100 +0,0 @@
+-# Copyright (C) 2025 Igalia S.L.
+-# Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
+-#
+-# Redistribution and use in source and binary forms, with or without
+-# modification, are permitted provided that the following conditions
+-# are met:
+-# 1.  Redistributions of source code must retain the above copyright
+-#     notice, this list of conditions and the following disclaimer.
+-# 2.  Redistributions in binary form must reproduce the above copyright
+-#     notice, this list of conditions and the following disclaimer in the
+-#     documentation and/or other materials provided with the distribution.
+-#
+-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND ITS CONTRIBUTORS ``AS
+-# IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+-# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR ITS
+-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+-# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+-# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+-# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-
+-#[=======================================================================[.rst:
+-FindSoup3
+----------
+-
+-Find the libsoup 3 headers and libraries.
+-
+-Imported Targets
+-^^^^^^^^^^^^^^^^
+-
+-``Soup3::Soup3``
+-  The libsoup 3 library, if found.
+-
+-Result Variables
+-^^^^^^^^^^^^^^^^
+-
+-This will define the following variables in your project:
+-
+-``Soup3_FOUND``
+-  true if (the requested version of) libsoup 3 is available.
+-``Soup3_VERSION``
+-  Version of libsoup 3.
+-
+-#]=======================================================================]
+-
+-find_package(PkgConfig QUIET)
+-pkg_check_modules(PC_Soup3 QUIET libsoup-3.0)
+-set(Soup3_COMPILE_OPTIONS ${PC_Soup3_CFLAGS_OTHER})
+-set(Soup3_VERSION ${PC_Soup3_VERSION})
+-
+-find_library(Soup3_LIBRARY
+-    NAMES soup-3.0
+-    HINTS ${PC_Soup3_LIBDIR}
+-          ${PC_Soup3_LIBRARY_DIRS}
+-)
+-
+-find_path(Soup3_INCLUDE_DIR
+-    NAMES libsoup/soup.h
+-    HINTS ${PC_Soup3_INCLUDEDIR}
+-          ${PC_Soup3_INCLUDE_DIRS}
+-    PATH_SUFFIXES libsoup-3.0
+-)
+-
+-if (Soup3_INCLUDE_DIR AND NOT Soup3_VERSION AND EXISTS "${Soup3_INCLUDE_DIR}/libsoup/soup-version.h")
+-    file(READ "${Soup3_INCLUDE_DIR}/libsoup/soup-version.h" Soup3_VERSION_CONTENT)
+-
+-    string(REGEX MATCH "#define[\t ]+SOUP_MAJOR_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
+-    set(Soup3_VERSION_MAJOR "${CMAKE_MATCH_1}")
+-
+-    string(REGEX MATCH "#define[\t ]+SOUP_MINOR_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
+-    set(Soup3_VERSION_MINOR "${CMAKE_MATCH_1}")
+-
+-    string(REGEX MATCH "#define[\t ]+SOUP_MICRO_VERSION[\t ]+\(([0-9]+)\)" _dummy "${Soup3_VERSION_CONTENT}")
+-    set(Soup3_VERSION_MICRO "${CMAKE_MATCH_1}")
+-
+-    set(Soup3_VERSION "${Soup3_VERSION_MAJOR}.${Soup3_VERSION_MINOR}.${Soup3_VERSION_MICRO}")
+-endif ()
+-
+-include(FindPackageHandleStandardArgs)
+-find_package_handle_standard_args(Soup3
+-    REQUIRED_VARS Soup3_LIBRARY Soup3_INCLUDE_DIR
+-    VERSION_VAR Soup3_VERSION
+-)
+-
+-if (Soup3_LIBRARY AND NOT TARGET Soup3::Soup3)
+-    add_library(Soup3::Soup3 UNKNOWN IMPORTED GLOBAL)
+-    set_target_properties(Soup3::Soup3 PROPERTIES
+-        IMPORTED_LOCATION "${Soup3_LIBRARY}"
+-        INTERFACE_COMPILE_OPTIONS "${Soup3_COMPILE_OPTIONS}"
+-        INTERFACE_INCLUDE_DIRECTORIES "${Soup3_INCLUDE_DIR}"
+-    )
+-endif ()
+-
+-mark_as_advanced(
+-    Soup3_INCLUDE_DIR
+-    Soup3_LIBRARY
+-)
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 6eaecf20d65d..c705d92ec658 100644
+index 35e832f..f457d2f 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
 @@ -13,7 +13,6 @@ list(APPEND WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS -Wno-unsafe-buffer-usage-in-forma
@@ -2351,11 +2254,11 @@ index 6eaecf20d65d..c705d92ec658 100644
 +    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 112 0 75)
 +    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 47 0 29)
 +elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "4.1")
-     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 21 8 21)
-     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 10 12 10)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 21 9 21)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 10 13 10)
  elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "6.0")
 diff --git a/Source/cmake/WebKitFeatures.cmake b/Source/cmake/WebKitFeatures.cmake
-index d4046bf679b2..821eed4b9eaf 100644
+index d4046bf..821eed4 100644
 --- a/Source/cmake/WebKitFeatures.cmake
 +++ b/Source/cmake/WebKitFeatures.cmake
 @@ -212,6 +212,7 @@ macro(WEBKIT_OPTION_BEGIN)
@@ -2366,8 +2269,45 @@ index d4046bf679b2..821eed4b9eaf 100644
      WEBKIT_OPTION_DEFINE(ENABLE_SERVICE_CONTROLS "Toggle service controls support" PRIVATE OFF)
      WEBKIT_OPTION_DEFINE(ENABLE_SHAREABLE_RESOURCE "Toggle network shareable resources support" PRIVATE OFF)
      WEBKIT_OPTION_DEFINE(ENABLE_SMOOTH_SCROLLING "Toggle smooth scrolling" PRIVATE ON)
+diff --git a/Tools/MiniBrowser/gtk/CMakeLists.txt b/Tools/MiniBrowser/gtk/CMakeLists.txt
+index d3ecfb8..4acc6c8 100644
+--- a/Tools/MiniBrowser/gtk/CMakeLists.txt
++++ b/Tools/MiniBrowser/gtk/CMakeLists.txt
+@@ -26,8 +26,15 @@ set(MiniBrowser_PRIVATE_INCLUDE_DIRECTORIES
+     ${CMAKE_SOURCE_DIR}/Source
+ )
+ 
++set(MiniBrowser_SYSTEM_INCLUDE_DIRECTORIES
++    ${GLIB_INCLUDE_DIRS}
++    ${LIBSOUP_INCLUDE_DIRS}
++)
++
+ set(MiniBrowser_PRIVATE_LIBRARIES
++    ${GLIB_LIBRARIES}
+     ${JavaScriptCore_LIBRARY_NAME}
++    ${LIBSOUP_LIBRARIES}
+     GTK::GTK
+     WebKit::WebKit
+ )
+diff --git a/Tools/TestWebKitAPI/PlatformGTK.cmake b/Tools/TestWebKitAPI/PlatformGTK.cmake
+index 957aef1..ba1be04 100644
+--- a/Tools/TestWebKitAPI/PlatformGTK.cmake
++++ b/Tools/TestWebKitAPI/PlatformGTK.cmake
+@@ -52,10 +52,12 @@ list(APPEND TestWebCore_SOURCES
+ )
+ 
+ list(APPEND TestWebCore_SYSTEM_INCLUDE_DIRECTORIES
++    ${GLIB_INCLUDE_DIRS}
+     ${GSTREAMER_INCLUDE_DIRS}
+     ${GSTREAMER_AUDIO_INCLUDE_DIRS}
+     ${GSTREAMER_PBUTILS_INCLUDE_DIRS}
+     ${GSTREAMER_VIDEO_INCLUDE_DIRS}
++    ${LIBSOUP_INCLUDE_DIRS}
+ )
+ 
+ list(APPEND TestWebCore_LIBRARIES
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp
-index 10bcc6bab0ea..1e04128918ae 100644
+index 10bcc6b..1e04128 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestAuthentication.cpp
 @@ -20,6 +20,7 @@
@@ -2492,7 +2432,7 @@ index 10bcc6bab0ea..1e04128918ae 100644
  }
  
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp
-index 689f3c551c7c..52c0affc768d 100644
+index 689f3c5..52c0aff 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestBackForwardList.cpp
 @@ -21,6 +21,7 @@
@@ -2516,7 +2456,7 @@ index 689f3c551c7c..52c0affc768d 100644
      if (soup_server_message_get_method(msg) != SOUP_METHOD_GET) {
          soup_server_message_set_status(msg, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp
-index b71c0b6431a6..31aafecfa6ab 100644
+index b71c0b6..31aafec 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestCookieManager.cpp
 @@ -23,6 +23,7 @@
@@ -2552,7 +2492,7 @@ index b71c0b6431a6..31aafecfa6ab 100644
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp
-index f256a3b7eedc..898b76af1bba 100644
+index f256a3b..898b76a 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestDownloads.cpp
 @@ -21,6 +21,7 @@
@@ -2598,7 +2538,7 @@ index f256a3b7eedc..898b76af1bba 100644
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp
-index 72461e02d71a..05e6c6692f69 100644
+index 72461e0..05e6c66 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp
 @@ -24,6 +24,7 @@
@@ -2622,7 +2562,7 @@ index 72461e02d71a..05e6c6692f69 100644
      static const char* responseString = "<html><body>Testing!Testing!Testing!Testing!Testing!Testing!Testing!"
          "Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!"
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestNetworkProcessMemoryPressure.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestNetworkProcessMemoryPressure.cpp
-index 175df404d1b2..6af5b3f5746f 100644
+index 175df40..6af5b3f 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestNetworkProcessMemoryPressure.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestNetworkProcessMemoryPressure.cpp
 @@ -21,10 +21,15 @@
@@ -2642,7 +2582,7 @@ index 175df404d1b2..6af5b3f5746f 100644
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp
-index fbd4e25e7f5c..5177ed6edb1b 100644
+index fbd4e25..5177ed6 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp
 @@ -21,6 +21,7 @@
@@ -2690,7 +2630,7 @@ index fbd4e25e7f5c..5177ed6edb1b 100644
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp
-index eb863ece3eec..fa88350fb9da 100644
+index eb863ec..fa88350 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp
 @@ -21,6 +21,7 @@
@@ -2759,7 +2699,7 @@ index eb863ece3eec..fa88350fb9da 100644
  
  void afterAll()
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp
-index 00c1d159f34a..0fe820ae9b18 100644
+index 00c1d15..0fe820a 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp
 @@ -23,6 +23,7 @@
@@ -2783,7 +2723,7 @@ index 00c1d159f34a..0fe820ae9b18 100644
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitPolicyClient.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitPolicyClient.cpp
-index 7ba9d99adbdf..c619a8afa176 100644
+index 7ba9d99..c619a8a 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitPolicyClient.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitPolicyClient.cpp
 @@ -23,6 +23,7 @@
@@ -2807,7 +2747,7 @@ index 7ba9d99adbdf..c619a8afa176 100644
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitSettings.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitSettings.cpp
-index 38c0da74d007..577409b9249f 100644
+index 38c0da7..577409b 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitSettings.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitSettings.cpp
 @@ -33,6 +33,7 @@
@@ -2831,7 +2771,7 @@ index 38c0da74d007..577409b9249f 100644
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitUserContentManager.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitUserContentManager.cpp
-index d9d8a6e86aca..8e79ad040362 100644
+index d9d8a6e..8e79ad0 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitUserContentManager.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitUserContentManager.cpp
 @@ -21,6 +21,7 @@
@@ -2855,7 +2795,7 @@ index d9d8a6e86aca..8e79ad040362 100644
      soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
      auto* responseBody = soup_server_message_get_response_body(message);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebContext.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebContext.cpp
-index b60b425a4c03..699acbe7fabb 100644
+index b60b425..699acbe 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebContext.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebContext.cpp
 @@ -22,6 +22,7 @@
@@ -2995,7 +2935,7 @@ index b60b425a4c03..699acbe7fabb 100644
  #endif
  
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebView.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebView.cpp
-index 73a0cf635932..d2c2fda5f8c2 100644
+index 73a0cf6..d2c2fda 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebView.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebView.cpp
 @@ -21,6 +21,7 @@
@@ -3019,7 +2959,7 @@ index 73a0cf635932..d2c2fda5f8c2 100644
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebXR.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebXR.cpp
-index 0c67013d9caa..7af715c860e5 100644
+index 0c67013..7af715c 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebXR.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebKitWebXR.cpp
 @@ -117,7 +117,11 @@ WebXRTest::WebXRTest()
@@ -3035,7 +2975,7 @@ index 0c67013d9caa..7af715c860e5 100644
      g_assert(soup_server_message_get_method(message) == SOUP_METHOD_GET);
  
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebsiteData.cpp b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebsiteData.cpp
-index 5061abe6e49c..973277430604 100644
+index 5061abe..9732774 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebsiteData.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGLib/TestWebsiteData.cpp
 @@ -22,11 +22,16 @@
@@ -3092,7 +3032,7 @@ index 5061abe6e49c..973277430604 100644
      WebsiteDataTest::add("WebKitWebsiteData", "itp", testWebsiteDataITP);
      WebsiteDataTest::add("WebKitWebsiteData", "service-worker-registrations", testWebsiteDataServiceWorkerRegistrations);
 diff --git a/Tools/TestWebKitAPI/Tests/WebKitGtk/TestContextMenu.cpp b/Tools/TestWebKitAPI/Tests/WebKitGtk/TestContextMenu.cpp
-index a91f6afced9b..84854657b78f 100644
+index a91f6af..8485465 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKitGtk/TestContextMenu.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKitGtk/TestContextMenu.cpp
 @@ -21,6 +21,7 @@
@@ -3127,8 +3067,38 @@ index a91f6afced9b..84854657b78f 100644
  {
      if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
          soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
+diff --git a/Tools/TestWebKitAPI/glib/CMakeLists.txt b/Tools/TestWebKitAPI/glib/CMakeLists.txt
+index f981707..6a5b4d3 100644
+--- a/Tools/TestWebKitAPI/glib/CMakeLists.txt
++++ b/Tools/TestWebKitAPI/glib/CMakeLists.txt
+@@ -33,6 +33,7 @@ endif ()
+ set(WebKitGLibAPITests_SYSTEM_INCLUDE_DIRECTORIES
+     ${GSTREAMER_AUDIO_INCLUDE_DIRS}
+     ${GSTREAMER_INCLUDE_DIRS}
++    ${LIBSOUP_INCLUDE_DIRS}
+ )
+ 
+ set(WebKitAPITest_LIBRARIES
+@@ -44,8 +45,8 @@ set(WebKitGLibAPITestsCore_LIBRARIES
+ )
+ 
+ set(WebKitGLibAPITest_LIBRARIES
++    ${LIBSOUP_LIBRARIES}
+     ${WebKitAPITest_LIBRARIES}
+-    Soup3::Soup3
+     WebKitGLibAPITestsCore
+ )
+ 
+@@ -203,6 +204,7 @@ if (PORT STREQUAL "WPE" AND ENABLE_WPE_QT_API)
+         ${CMAKE_BINARY_DIR}
+         ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}
+         ${JavaScriptCoreGLib_FRAMEWORK_HEADERS_DIR}
++        ${LIBSOUP_INCLUDE_DIRS}
+         ${TOOLS_DIR}/TestWebKitAPI
+         ${WEBKIT_DIR}/WPEPlatform
+         ${WPEPlatform_DERIVED_SOURCES_DIR}
 diff --git a/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp b/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
-index 47375e39b5e3..2691e97b1ed8 100644
+index 47375e3..2691e97 100644
 --- a/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
 +++ b/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
 @@ -62,8 +62,14 @@ void WebKitTestServer::run(SoupServerCallback serverCallback)
@@ -3147,7 +3117,7 @@ index 47375e39b5e3..2691e97b1ed8 100644
  
  void WebKitTestServer::addWebSocketHandler(SoupServerWebsocketCallback callback, gpointer userData)
 diff --git a/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.h b/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.h
-index a0ab5439a86d..1e80c652dbc0 100644
+index a0ab543..1e80c65 100644
 --- a/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.h
 +++ b/Tools/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.h
 @@ -46,14 +46,18 @@ public:
@@ -3170,5 +3140,5 @@ index a0ab5439a86d..1e80c652dbc0 100644
      RefPtr<WorkQueue> m_queue;
  };
 -- 
-2.54.0
+2.55.0
 
