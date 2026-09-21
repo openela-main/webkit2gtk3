@@ -19,7 +19,7 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.52.5
+Version:        2.54.0
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -31,6 +31,8 @@ Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # $ gpg --import aperez.key carlosgc.key
 # $ gpg --export --export-options export-minimal 013A0127AC9C65B34FFA62526C1009B693975393 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
+
+Patch:          skia-s390x.patch
 
 ##
 ## Patches to support older or missing build dependencies
@@ -48,6 +50,9 @@ Patch:          evolution-sandbox-warning.patch
 ##
 ## Upstream patches to remove, hopefully after next update
 ##
+
+# https://github.com/WebKit/WebKit/pull/74262
+Patch:          mimalloc.patch
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap

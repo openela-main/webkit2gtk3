@@ -1,4 +1,4 @@
-From dbcb36a6555e7c7e58527ac4f797abe4b1782362 Mon Sep 17 00:00:00 2001
+From 44d00ae9107085cd3d0593daa5f8defbf52c586f Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 8 Aug 2025 10:55:54 -0500
 Subject: [PATCH] Revert "[GLib] Remove all GLIB_CHECK_VERSION conditionals"
@@ -16,7 +16,7 @@ This partially reverts commit 85b637b69f1c3a6242420b198d1c173477ce0f22.
  8 files changed, 36 insertions(+), 4 deletions(-)
 
 diff --git a/Source/WTF/wtf/URL.h b/Source/WTF/wtf/URL.h
-index 677314b5c781..f739e6df4892 100644
+index 3ed98dc3dbae..012c1e6f515f 100644
 --- a/Source/WTF/wtf/URL.h
 +++ b/Source/WTF/wtf/URL.h
 @@ -27,7 +27,7 @@
@@ -38,10 +38,10 @@ index 677314b5c781..f739e6df4892 100644
      WTF_EXPORT_PRIVATE GRefPtr<GUri> createGUri() const;
  #endif
 diff --git a/Source/WTF/wtf/glib/GRefPtr.h b/Source/WTF/wtf/glib/GRefPtr.h
-index 46d25f00cc69..d3a764808a6f 100644
+index 56612d08085b..74c10c378deb 100644
 --- a/Source/WTF/wtf/glib/GRefPtr.h
 +++ b/Source/WTF/wtf/glib/GRefPtr.h
-@@ -329,7 +329,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
+@@ -372,7 +372,9 @@ WTF_DEFINE_GREF_TRAITS_INLINE(GMainLoop, g_main_loop_ref, g_main_loop_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GMappedFile, g_mapped_file_ref, g_mapped_file_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GPtrArray, g_ptr_array_ref, g_ptr_array_unref)
  WTF_DEFINE_GREF_TRAITS_INLINE(GSource, g_source_ref, g_source_unref)
@@ -122,7 +122,7 @@ index c9bf6a774f49..546a974075c6 100644
  
  bool LowPowerModeNotifier::isLowPowerModeEnabled() const
 diff --git a/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp b/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
-index fb5773d56767..bc10fda05f78 100644
+index a66f3c2bf24b..47244ae82a34 100644
 --- a/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
 +++ b/Source/WebCore/platform/network/soup/CertificateInfoSoup.cpp
 @@ -73,9 +73,11 @@ CertificateInfo CertificateInfo::isolatedCopy() const
@@ -148,7 +148,7 @@ index fb5773d56767..bc10fda05f78 100644
              nullptr)));
          RELEASE_ASSERT(certificate);
          issuer = certificate.get();
-@@ -101,6 +105,7 @@ std::optional<CertificateSummary> CertificateInfo::summary() const
+@@ -121,6 +125,7 @@ std::optional<CertificateSummary> CertificateInfo::summary() const
      if (!m_certificate)
          return std::nullopt;
  
@@ -156,7 +156,7 @@ index fb5773d56767..bc10fda05f78 100644
      CertificateSummary summaryInfo;
  
      GRefPtr<GDateTime> validNotBefore;
-@@ -125,6 +130,9 @@ std::optional<CertificateSummary> CertificateInfo::summary() const
+@@ -145,6 +150,9 @@ std::optional<CertificateSummary> CertificateInfo::summary() const
      }
  
      return summaryInfo;
@@ -167,10 +167,10 @@ index fb5773d56767..bc10fda05f78 100644
  
  } // namespace WebCore
 diff --git a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-index 6112a107f99a..b569c48de5ba 100644
+index 6637fc554bbd..43d529f1e21b 100644
 --- a/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
 +++ b/Source/WebKit/Shared/glib/ArgumentCodersGLib.cpp
-@@ -121,11 +121,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
+@@ -123,11 +123,13 @@ void ArgumentCoder<GRefPtr<GTlsCertificate>>::encode(Encoder& encoder, const GRe
  
      encoder << certificatesData;
  
@@ -184,7 +184,7 @@ index 6112a107f99a..b569c48de5ba 100644
  }
  
  std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>::decode(Decoder& decoder)
-@@ -138,6 +140,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
+@@ -140,6 +142,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
      if (!certificatesData->size())
          return GRefPtr<GTlsCertificate>();
  
@@ -192,7 +192,7 @@ index 6112a107f99a..b569c48de5ba 100644
      std::optional<GRefPtr<GByteArray>> privateKey;
      decoder >> privateKey;
      if (!privateKey) [[unlikely]]
-@@ -147,6 +150,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
+@@ -149,6 +152,7 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
      decoder >> privateKeyPKCS11Uri;
      if (!privateKeyPKCS11Uri) [[unlikely]]
          return std::nullopt;
@@ -200,7 +200,7 @@ index 6112a107f99a..b569c48de5ba 100644
  
      GType certificateType = g_tls_backend_get_certificate_type(g_tls_backend_get_default());
      GRefPtr<GTlsCertificate> certificate;
-@@ -157,8 +161,10 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
+@@ -159,8 +163,10 @@ std::optional<GRefPtr<GTlsCertificate>> ArgumentCoder<GRefPtr<GTlsCertificate>>:
              certificateType, nullptr, nullptr,
              "certificate", certificateData.get(),
              "issuer", issuer,
@@ -212,7 +212,7 @@ index 6112a107f99a..b569c48de5ba 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 94fc72774189..6eaecf20d65d 100644
+index 8b33cd88f342..c1ec91ca6563 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
 @@ -10,8 +10,7 @@ set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
@@ -225,7 +225,7 @@ index 94fc72774189..6eaecf20d65d 100644
  find_package(Cairo 1.16.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
  find_package(Soup3 3.0.0 REQUIRED)
-@@ -261,6 +260,11 @@ if (ENABLED_COMPILER_SANITIZERS)
+@@ -264,6 +263,11 @@ if (ENABLED_COMPILER_SANITIZERS)
      set(ENABLE_DOCUMENTATION OFF)
  endif ()
  
@@ -238,5 +238,5 @@ index 94fc72774189..6eaecf20d65d 100644
      find_package(Manette 0.2.4)
      if (NOT Manette_FOUND)
 -- 
-2.54.0
+2.55.0
 

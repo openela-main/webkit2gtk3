@@ -1,4 +1,4 @@
-From 1d1143a6f00fae1d1812da3dcdd489c71154d529 Mon Sep 17 00:00:00 2001
+From 1ec87cdc59496fcce4c23296da63275ab152038f Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@gnome.org>
 Date: Mon, 6 Apr 2026 18:05:37 -0500
 Subject: [PATCH] Make g-ir-scanner warnings nonfatal
@@ -24,5 +24,5 @@ index 8cf372f3b172..cb724a418020 100644
              "--library=$<TARGET_FILE_BASE_NAME:${opt_TARGET}>"
              "--library-path=$<TARGET_FILE_DIR:${opt_TARGET}>"
 -- 
-2.53.0
+2.55.0
 
