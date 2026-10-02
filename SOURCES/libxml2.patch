@@ -1,0 +1,26 @@
+From 510c529ca27c701cee83c5e1c03a1e23cfa5b3bd Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@gnome.org>
+Date: Fri, 18 Sep 2026 13:23:13 -0500
+Subject: [PATCH] Revert libxml2 requirement bump
+
+This doesn't appear to actually be needed.
+---
+ Source/cmake/OptionsGTK.cmake | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
+index 6a511d06562b..82412019e0fd 100644
+--- a/Source/cmake/OptionsGTK.cmake
++++ b/Source/cmake/OptionsGTK.cmake
+@@ -19,7 +19,7 @@ find_package(HarfBuzz 1.7.5 REQUIRED COMPONENTS ICU)
+ find_package(ICU 70.1 REQUIRED COMPONENTS data i18n uc)
+ find_package(JPEG REQUIRED)
+ find_package(Epoxy 1.5.4 REQUIRED)
+-find_package(LibXml2 2.9.13 REQUIRED)
++find_package(LibXml2 2.8.0 REQUIRED)
+ find_package(PNG REQUIRED)
+ find_package(SQLite3 REQUIRED)
+ find_package(Threads REQUIRED)
+-- 
+2.55.0
+

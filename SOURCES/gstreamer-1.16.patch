@@ -1,4 +1,4 @@
-From 757b61bda6fa34c3bd2de45eeccc976b10c5b035 Mon Sep 17 00:00:00 2001
+From 2c1b483816676c2aae19008efdf8f0c9b9f9f781 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@redhat.com>
 Date: Fri, 4 Apr 2025 14:00:12 -0500
 Subject: [PATCH] Build against GStreamer 1.16
@@ -10,31 +10,32 @@ Subject: [PATCH] Build against GStreamer 1.16
  .../graphics/gstreamer/GStreamerCommon.cpp    | 82 +++++++++++++------
  .../graphics/gstreamer/GStreamerCommon.h      | 15 ++++
  .../gstreamer/MediaPlayerPrivateGStreamer.cpp | 30 +------
- .../CoordinatedPlatformLayerBufferVideo.cpp   | 14 +---
+ .../gstreamer/VideoEncoderGStreamer.cpp       |  1 +
+ .../CoordinatedPlatformLayerBufferVideo.cpp   |  5 +-
  .../gstreamer/GStreamerCodecUtilities.cpp     | 39 +++++----
  .../VideoEncoderPrivateGStreamer.cpp          | 16 ----
  Source/cmake/GStreamerChecks.cmake            |  4 +-
- 10 files changed, 121 insertions(+), 120 deletions(-)
+ 11 files changed, 119 insertions(+), 114 deletions(-)
 
 diff --git a/Source/WebCore/platform/audio/gstreamer/AudioSourceProviderGStreamer.cpp b/Source/WebCore/platform/audio/gstreamer/AudioSourceProviderGStreamer.cpp
-index 33037a80b0ca..20c3cdc80b31 100644
+index 8b5c3587b04f..69ac1c2c8f60 100644
 --- a/Source/WebCore/platform/audio/gstreamer/AudioSourceProviderGStreamer.cpp
 +++ b/Source/WebCore/platform/audio/gstreamer/AudioSourceProviderGStreamer.cpp
 @@ -141,7 +141,8 @@ AudioSourceProviderGStreamer::AudioSourceProviderGStreamer(MediaStreamTrackPriva
      g_signal_connect_swapped(decodebin, "pad-added", G_CALLBACK(+[](AudioSourceProviderGStreamer* provider, GstPad* pad) {
-         auto padCaps = adoptGRef(gst_pad_query_caps(pad, nullptr));
+         GRefPtr padCaps = adoptGRef(gst_pad_query_caps(pad, nullptr));
          bool isAudio = doCapsHaveType(padCaps.get(), "audio"_s);
 -        RELEASE_ASSERT(isAudio);
 +        if (!isAudio)
 +            return;
  
-         auto sinkPad = adoptGRef(gst_element_get_static_pad(provider->m_audioSinkBin.get(), "sink"));
+         GRefPtr sinkPad = adoptGRef(gst_element_get_static_pad(provider->m_audioSinkBin.get(), "sink"));
          gst_pad_link(pad, sinkPad.get());
 diff --git a/Source/WebCore/platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp b/Source/WebCore/platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp
-index f247b617d9c3..eadb3b0e97ba 100644
+index 90b22d8bd346..c061cf99f7db 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/GLVideoSinkGStreamer.cpp
-@@ -70,20 +70,10 @@ WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitGLVideoSink, webkit_gl_video_sink, GST_TYPE_B
+@@ -98,20 +98,10 @@ WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitGLVideoSink, webkit_gl_video_sink, GST_TYPE_B
      GST_DEBUG_CATEGORY_INIT(webkit_gl_video_sink_debug, "webkitglvideosink", 0, "GL video sink element"))
  
  #if USE(GBM)
@@ -56,11 +57,11 @@ index f247b617d9c3..eadb3b0e97ba 100644
  }
  #endif
  
-@@ -129,7 +119,19 @@ static void webKitGLVideoSinkConstructed(GObject* object)
-     if (!s_isDMABufDisabled)
+@@ -151,7 +141,19 @@ static void webKitGLVideoSinkConstructed(GObject* object)
          gst_caps_append(caps.get(), buildDMABufCaps().leakRef());
  #endif
--    GRefPtr<GstCaps> glCaps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) " GST_GL_CAPS_FORMAT));
+ 
+-    GRefPtr glCaps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) " GST_GL_CAPS_FORMAT));
 +    // Workaround until we can depend on GStreamer 1.16.2.
 +    // https://gitlab.freedesktop.org/gstreamer/gst-plugins-base/commit/8d32de090554cf29fe359f83aa46000ba658a693
 +    // Forcing a color conversion to RGBA here allows glupload to internally use
@@ -73,11 +74,11 @@ index f247b617d9c3..eadb3b0e97ba 100644
 +    // and set the WEBKIT_GST_NO_RGBA_CONVERSION environment variable until
 +    // GStreamer 1.16.2 is released.
 +    // See also https://bugs.webkit.org/show_bug.cgi?id=201422
-+    GRefPtr<GstCaps> glCaps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) RGBA"));
++    GRefPtr glCaps = adoptGRef(gst_caps_from_string("video/x-raw, format = (string) RGBA"));
      gst_caps_set_features(glCaps.get(), 0, gst_caps_features_new(GST_CAPS_FEATURE_MEMORY_GL_MEMORY, nullptr));
      gst_caps_append(caps.get(), glCaps.leakRef());
  
-@@ -171,17 +173,11 @@ static GstStateChangeReturn webKitGLVideoSinkChangeState(GstElement* element, Gs
+@@ -260,17 +262,11 @@ static GstStateChangeReturn webKitGLVideoSinkChangeState(GstElement* element, Gs
      return GST_ELEMENT_CLASS(webkit_gl_video_sink_parent_class)->change_state(element, transition);
  }
  
@@ -98,7 +99,7 @@ index f247b617d9c3..eadb3b0e97ba 100644
          G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propertyId, paramSpec);
          RELEASE_ASSERT_NOT_REACHED();
 diff --git a/Source/WebCore/platform/graphics/gstreamer/GStreamerAudioMixer.cpp b/Source/WebCore/platform/graphics/gstreamer/GStreamerAudioMixer.cpp
-index afbe4777dbc7..d414525f0cb6 100644
+index f8267b4c0d48..465762446c7e 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/GStreamerAudioMixer.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/GStreamerAudioMixer.cpp
 @@ -32,7 +32,7 @@ GST_DEBUG_CATEGORY_STATIC(webkit_media_gst_audio_mixer_debug);
@@ -111,10 +112,10 @@ index afbe4777dbc7..d414525f0cb6 100644
  
  GStreamerAudioMixer& GStreamerAudioMixer::singleton()
 diff --git a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
-index a78ef36c5eec..de77a6ef4760 100644
+index db9e66336f35..73c9f3e76e00 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.cpp
-@@ -137,6 +137,25 @@ static GstClockTime s_webkitGstInitTime;
+@@ -141,6 +141,25 @@ static bool s_isGstDebugDotFilesSupportEnabled;
  }
  
  #if ENABLE(VIDEO)
@@ -140,7 +141,7 @@ index a78ef36c5eec..de77a6ef4760 100644
  bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, GstVideoFormat& format, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride, double& frameRate, PlatformVideoColorSpace& colorSpace)
  {
      if (!doCapsHaveType(caps, GST_VIDEO_CAPS_TYPE_PREFIX)) {
-@@ -725,31 +744,6 @@ void deinitializeGStreamer()
+@@ -753,31 +772,6 @@ void deinitializeGStreamer()
      teardownVideoEncoderSingleton();
      teardownGStreamerImageDecoders();
  #endif
@@ -148,7 +149,7 @@ index a78ef36c5eec..de77a6ef4760 100644
 -    bool isLeaksTracerActive = false;
 -    auto activeTracers = gst_tracing_get_active_tracers();
 -    while (activeTracers) {
--        auto tracer = adoptGRef(GST_TRACER_CAST(activeTracers->data));
+-        GRefPtr tracer = adoptGRef(GST_TRACER_CAST(activeTracers->data));
 -        if (!isLeaksTracerActive && equal(unsafeSpan(G_OBJECT_TYPE_NAME(G_OBJECT(tracer.get()))), "GstLeaksTracer"_s))
 -            isLeaksTracerActive = true;
 -        activeTracers = g_list_delete_link(activeTracers, activeTracers);
@@ -172,7 +173,7 @@ index a78ef36c5eec..de77a6ef4760 100644
  }
  
  unsigned getGstPlayFlag(ASCIILiteral nick)
-@@ -839,7 +833,7 @@ GstMappedFrame::GstMappedFrame(const GRefPtr<GstSample>& sample, GstMapFlags fla
+@@ -876,7 +870,7 @@ GstMappedFrame::GstMappedFrame(const GRefPtr<GstSample>& sample, GstMapFlags fla
          return;
  
      gst_video_alignment_reset(&m_alignment);
@@ -181,7 +182,7 @@ index a78ef36c5eec..de77a6ef4760 100644
  }
  
  GstMappedFrame::~GstMappedFrame()
-@@ -918,6 +912,8 @@ int GstMappedFrame::planeStride(uint32_t planeIndex) const
+@@ -955,6 +949,8 @@ int GstMappedFrame::planeStride(uint32_t planeIndex) const
      return GST_VIDEO_FRAME_PLANE_STRIDE(&m_frame, planeIndex);
  }
  
@@ -190,7 +191,7 @@ index a78ef36c5eec..de77a6ef4760 100644
  size_t GstMappedFrame::planeHeight(uint32_t planeIndex) const
  {
      RELEASE_ASSERT(isValid());
-@@ -1611,6 +1607,36 @@ String gstStructureToJSONString(const GstStructure* structure)
+@@ -1652,6 +1648,36 @@ String gstStructureToJSONString(const GstStructure* structure)
      return value->toJSONString();
  }
  
@@ -227,7 +228,7 @@ index a78ef36c5eec..de77a6ef4760 100644
  GstClockTime webkitGstInitTime()
  {
      return s_webkitGstInitTime;
-@@ -1668,6 +1694,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
+@@ -1721,6 +1747,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
      case GST_VIDEO_TRANSFER_BT709:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt709;
          break;
@@ -235,7 +236,7 @@ index a78ef36c5eec..de77a6ef4760 100644
      case GST_VIDEO_TRANSFER_BT601:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Smpte170m;
          break;
-@@ -1680,6 +1707,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
+@@ -1733,6 +1760,7 @@ PlatformVideoColorSpace videoColorSpaceFromInfo(const GstVideoInfo& info)
      case GST_VIDEO_TRANSFER_BT2020_10:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt2020_10bit;
          break;
@@ -243,27 +244,27 @@ index a78ef36c5eec..de77a6ef4760 100644
      case GST_VIDEO_TRANSFER_BT2020_12:
          colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt2020_12bit;
          break;
-@@ -1798,6 +1826,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
+@@ -1851,6 +1879,7 @@ GstVideoColorimetry colorimetryFromColorSpace(const PlatformVideoColorSpace& col
          case PlatformVideoTransferCharacteristics::Bt709:
-             GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT709;
+             result.transfer = GST_VIDEO_TRANSFER_BT709;
              break;
 +#if GST_CHECK_VERSION(1, 18, 0)
          case PlatformVideoTransferCharacteristics::Smpte170m:
-             GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT601;
+             result.transfer = GST_VIDEO_TRANSFER_BT601;
              break;
-@@ -1810,6 +1839,7 @@ void fillVideoInfoColorimetryFromColorSpace(GstVideoInfo* info, const PlatformVi
+@@ -1863,6 +1892,7 @@ GstVideoColorimetry colorimetryFromColorSpace(const PlatformVideoColorSpace& col
          case PlatformVideoTransferCharacteristics::Bt2020_10bit:
-             GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT2020_10;
+             result.transfer = GST_VIDEO_TRANSFER_BT2020_10;
              break;
 +#endif
          case PlatformVideoTransferCharacteristics::Bt2020_12bit:
-             GST_VIDEO_INFO_COLORIMETRY(info).transfer = GST_VIDEO_TRANSFER_BT2020_12;
+             result.transfer = GST_VIDEO_TRANSFER_BT2020_12;
              break;
 diff --git a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.h b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.h
-index b4fd887c4036..79873050f8d9 100644
+index eed7b3ad40c7..1e2f963c4a4a 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.h
 +++ b/Source/WebCore/platform/graphics/gstreamer/GStreamerCommon.h
-@@ -78,6 +78,14 @@ inline bool gst_check_version(guint major, guint minor, guint micro)
+@@ -75,6 +75,14 @@ inline bool gst_check_version(guint major, guint minor, guint micro)
  }
  #endif
  
@@ -278,7 +279,7 @@ index b4fd887c4036..79873050f8d9 100644
  #define GST_VIDEO_CAPS_TYPE_PREFIX  "video/"_s
  #define GST_AUDIO_CAPS_TYPE_PREFIX  "audio/"_s
  #define GST_TEXT_CAPS_TYPE_PREFIX   "text/"_s
-@@ -317,6 +325,13 @@ Vector<T> gstStructureGetList(const GstStructure*, CStringView key);
+@@ -310,6 +318,13 @@ Vector<T> gstStructureGetList(const GstStructure*, CStringView key);
  
  String gstStructureToJSONString(const GstStructure*);
  
@@ -293,19 +294,19 @@ index b4fd887c4036..79873050f8d9 100644
  
  PlatformVideoColorSpace videoColorSpaceFromCaps(const GstCaps*);
 diff --git a/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp b/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
-index 34a8785843bb..ecf19035a27d 100644
+index c5b860567e10..78a21ab8a2ff 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
-@@ -630,8 +630,6 @@ bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate, b
+@@ -651,8 +651,6 @@ bool MediaPlayerPrivateGStreamer::doSeek(const SeekTarget& target, float rate, b
      auto seekStop = toGstClockTime(endTime);
-     auto event = adoptGRef(gst_event_new_seek(rate, GST_FORMAT_TIME, seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop));
+     GRefPtr event = adoptGRef(gst_event_new_seek(rate, GST_FORMAT_TIME, seekFlags, GST_SEEK_TYPE_SET, seekStart, GST_SEEK_TYPE_SET, seekStop));
  
 -    GST_DEBUG_OBJECT(pipeline(), "[Seek] Performing actual seek to %" GST_TIMEP_FORMAT " (endTime: %" GST_TIMEP_FORMAT ") at rate %f", &seekStart, &seekStop, rate);
 -
      if (isAsync) {
          auto data = createAsyncSeekData();
          data->event = WTF::move(event);
-@@ -4428,33 +4426,7 @@ void MediaPlayerPrivateGStreamer::setStreamVolumeElement(GstStreamVolume* volume
+@@ -4564,33 +4562,7 @@ GstElement* MediaPlayerPrivateGStreamer::createVideoSink()
  
  bool MediaPlayerPrivateGStreamer::updateVideoSinkStatistics()
  {
@@ -340,54 +341,36 @@ index 34a8785843bb..ecf19035a27d 100644
  }
  
  std::optional<VideoPlaybackQualityMetrics> MediaPlayerPrivateGStreamer::videoPlaybackQualityMetrics()
+diff --git a/Source/WebCore/platform/graphics/gstreamer/VideoEncoderGStreamer.cpp b/Source/WebCore/platform/graphics/gstreamer/VideoEncoderGStreamer.cpp
+index 027dc3a3a6f7..119f514b3948 100644
+--- a/Source/WebCore/platform/graphics/gstreamer/VideoEncoderGStreamer.cpp
++++ b/Source/WebCore/platform/graphics/gstreamer/VideoEncoderGStreamer.cpp
+@@ -222,6 +222,7 @@ static std::optional<unsigned> retrieveTemporalIndex(const GRefPtr<GstSample>& s
+     GST_TRACE("Retrieval of temporal index from encoded format %s is not yet supported.", name.utf8());
+ #endif
+ #endif
++    UNUSED_PARAM(sample);
+     return { };
+ }
+ 
 diff --git a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferVideo.cpp b/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferVideo.cpp
-index b9905616d55f..ec1e8c4ab19e 100644
+index 53c81ac0f830..00c42cbeea64 100644
 --- a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferVideo.cpp
 +++ b/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedPlatformLayerBufferVideo.cpp
-@@ -103,7 +103,7 @@ std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferVi
-     // When not having a texture, we map the frame here and upload the pixels to a texture in the
-     // compositor thread, in paintToTextureMapper(), which also allows us to use the texture mapper
-     // bitmap texture pool.
--    auto caps = adoptGRef(gst_video_info_to_caps(videoInfo));
-+    auto caps = adoptGRef(gst_video_info_to_caps((GstVideoInfo *)videoInfo));
-     auto sample = adoptGRef(gst_sample_new(buffer, caps.get(), nullptr, nullptr));
-     m_videoFrame.emplace(GstMappedFrame(sample, GST_MAP_READ));
-     if (!*m_videoFrame) {
-@@ -190,10 +190,7 @@ std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferVi
-             colorSpace = DMABufBuffer::ColorSpace::Bt709;
-         else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_BT2020))
-             colorSpace = DMABufBuffer::ColorSpace::Bt2020;
--        else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_BT2100_PQ)) {
--            colorSpace = DMABufBuffer::ColorSpace::Bt2020;
--            transferFunction = DMABufBuffer::TransferFunction::Pq;
--        } else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_SMPTE240M))
-+        else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_SMPTE240M))
-             colorSpace = DMABufBuffer::ColorSpace::Smpte240M;
-         dmabuf->setColorSpace(colorSpace);
-         dmabuf->setTransferFunction(transferFunction);
-@@ -210,7 +207,7 @@ std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferVi
- #if USE(GSTREAMER_GL)
- std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferVideo::createBufferFromGLMemory(GstBuffer* buffer, const GstVideoInfo* videoInfo)
- {
--    auto caps = adoptGRef(gst_video_info_to_caps(videoInfo));
-+    auto caps = adoptGRef(gst_video_info_to_caps((GstVideoInfo *)videoInfo));
-     auto sample = adoptGRef(gst_sample_new(buffer, caps.get(), nullptr, nullptr));
-     m_videoFrame.emplace(GstMappedFrame(sample, static_cast<GstMapFlags>(GST_MAP_READ | GST_MAP_GL)));
-     if (!*m_videoFrame) {
-@@ -255,10 +252,7 @@ std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferVi
-             yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt709;
-         else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(m_videoFrame->info()), GST_VIDEO_COLORIMETRY_BT2020))
-             yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt2020;
--        else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(m_videoFrame->info()), GST_VIDEO_COLORIMETRY_BT2100_PQ)) {
--            yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt2020;
--            transferFunction = CoordinatedPlatformLayerBufferYUV::TransferFunction::Pq;
--        } else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(m_videoFrame->info()), GST_VIDEO_COLORIMETRY_SMPTE240M))
-+        else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(m_videoFrame->info()), GST_VIDEO_COLORIMETRY_SMPTE240M))
-             yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Smpte240M;
- 
-         return CoordinatedPlatformLayerBufferYUV::create(numberOfPlanes, WTF::move(planes), WTF::move(yuvPlane), WTF::move(yuvPlaneOffset), yuvToRgbColorSpace, transferFunction, m_size, m_flags, nullptr);
+@@ -94,10 +94,7 @@ static std::pair<CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace, Coordina
+         yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt709;
+     else if (gst_video_colorimetry_matches(&colorimetry, GST_VIDEO_COLORIMETRY_BT2020))
+         yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt2020;
+-    else if (gst_video_colorimetry_matches(&colorimetry, GST_VIDEO_COLORIMETRY_BT2100_PQ)) {
+-        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt2020;
+-        transferFunction = CoordinatedPlatformLayerBufferYUV::TransferFunction::Pq;
+-    } else if (gst_video_colorimetry_matches(&colorimetry, GST_VIDEO_COLORIMETRY_SMPTE240M))
++    else if (gst_video_colorimetry_matches(&colorimetry, GST_VIDEO_COLORIMETRY_SMPTE240M))
+         yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Smpte240M;
+     return { yuvToRgbColorSpace, transferFunction };
+ }
 diff --git a/Source/WebCore/platform/gstreamer/GStreamerCodecUtilities.cpp b/Source/WebCore/platform/gstreamer/GStreamerCodecUtilities.cpp
-index 643ef5a67982..b5e35f09bcf1 100644
+index 0593a4fb88c7..f61a4d74cd85 100644
 --- a/Source/WebCore/platform/gstreamer/GStreamerCodecUtilities.cpp
 +++ b/Source/WebCore/platform/gstreamer/GStreamerCodecUtilities.cpp
 @@ -254,9 +254,10 @@ static std::pair<GRefPtr<GstCaps>, GRefPtr<GstCaps>> vpxCapsFromCodecString(cons
@@ -472,10 +455,10 @@ index 643ef5a67982..b5e35f09bcf1 100644
      };
  
 diff --git a/Source/WebCore/platform/gstreamer/VideoEncoderPrivateGStreamer.cpp b/Source/WebCore/platform/gstreamer/VideoEncoderPrivateGStreamer.cpp
-index ceb958629a20..2dac345cdbc5 100644
+index 0f59f8aa8a8f..7496eab08245 100644
 --- a/Source/WebCore/platform/gstreamer/VideoEncoderPrivateGStreamer.cpp
 +++ b/Source/WebCore/platform/gstreamer/VideoEncoderPrivateGStreamer.cpp
-@@ -889,22 +889,6 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
+@@ -891,22 +891,6 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
                  "temporal-scalability-rate-decimator", decimators.get(),
                  "temporal-scalability-target-bitrate", bitrates.get(), nullptr);
  
@@ -499,7 +482,7 @@ index ceb958629a20..2dac345cdbc5 100644
          });
  
 diff --git a/Source/cmake/GStreamerChecks.cmake b/Source/cmake/GStreamerChecks.cmake
-index 0472cde8df37..aabca8479f22 100644
+index d36e7190eeb1..ff5c23b2991e 100644
 --- a/Source/cmake/GStreamerChecks.cmake
 +++ b/Source/cmake/GStreamerChecks.cmake
 @@ -1,6 +1,6 @@
@@ -520,5 +503,5 @@ index 0472cde8df37..aabca8479f22 100644
            if (ENABLE_WEB_AUDIO)
                if (NOT PC_GSTREAMER_AUDIO_FOUND OR NOT PC_GSTREAMER_FFT_FOUND)
 -- 
-2.53.0
+2.55.0
 

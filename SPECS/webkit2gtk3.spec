@@ -6,7 +6,7 @@
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
 Name:           webkit2gtk3
-Version:        2.52.5
+Version:        2.54.0
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -18,6 +18,8 @@ Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # $ gpg --import aperez.key carlosgc.key
 # $ gpg --export --export-options export-minimal 013A0127AC9C65B34FFA62526C1009B693975393 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
+
+Patch000:       skia-s390x.patch
 
 ##
 ## Patches to support older build toolchain
@@ -41,12 +43,17 @@ Patch301:       cairo-1.15.patch
 Patch302:       gstreamer-1.16.patch
 Patch303:       harfbuzz-1.7.5.patch
 Patch304:       libsoup2.patch
-Patch305:       icu60.patch
-Patch306:       g-ir-scanner-nonfatal.patch
+Patch305:       g-ir-scanner-nonfatal.patch
+Patch306:       libxml2.patch
+Patch307:       python3.6.patch
+Patch308:       icu60.patch
 
 ##
 ## Upstream patches to remove, hopefully after next update
 ##
+
+# https://github.com/WebKit/WebKit/pull/74262
+Patch400:       mimalloc.patch
 
 # *** FRAGILE ***
 # If the build fails due to undefined reference to an atomic function, then
@@ -318,6 +325,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Mon Sep 21 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.54.0-1
+- Update to 2.54.0
+
 * Fri Jul 17 2026 Tomas Popela <tpopela@redhat.com> - 2.52.5-1
 - Update to 2.52.5
 

@@ -1,0 +1,117 @@
+From 608fda20e303cb5006ab83a4cd391b23a7ae24f9 Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@gnome.org>
+Date: Fri, 18 Sep 2026 14:58:16 -0500
+Subject: [PATCH] Build with python 3.6
+
+---
+ .../generate-unified-source-bundles.py        | 28 +++++++++----------
+ 1 file changed, 13 insertions(+), 15 deletions(-)
+
+diff --git a/Source/WTF/Scripts/generate-unified-source-bundles.py b/Source/WTF/Scripts/generate-unified-source-bundles.py
+index f672cc24c812..6721e23feef3 100644
+--- a/Source/WTF/Scripts/generate-unified-source-bundles.py
++++ b/Source/WTF/Scripts/generate-unified-source-bundles.py
+@@ -26,7 +26,6 @@ import fnmatch
+ import os
+ import re
+ import sys
+-from dataclasses import dataclass
+ from pathlib import Path
+ from typing import Optional
+ 
+@@ -43,7 +42,7 @@ def sanitize(s: str) -> str:
+     return re.sub(r'[^A-Za-z0-9]+', '-', s).strip('-') or 'root'
+ 
+ 
+-def bundle_prefix_and_size_for_path(path: Path, args) -> tuple[str, int]:
++def bundle_prefix_and_size_for_path(path: Path, args):
+     top_level_directory = path.parent
+     # Walk up until the parent's parent equals the parent (i.e., we're at a single-component path)
+     while top_level_directory.parent.parent != top_level_directory.parent:
+@@ -55,7 +54,6 @@ def bundle_prefix_and_size_for_path(path: Path, args) -> tuple[str, int]:
+     return sanitize(str(top_level_directory)), args.max_bundle_size
+ 
+ 
+-@dataclass(init=False)
+ class SourceFile:
+     path: Path
+     file_index: int
+@@ -67,8 +65,8 @@ class SourceFile:
+         self.cost = 1
+         self.file_index = file_index
+         self._non_arc = False
+-        self._header_group: Optional[str] = None
+-        self._derived: Optional[bool] = None
++        self._header_group = None
++        self._derived = None
+         self._args = args
+ 
+         attribute_start = file_line.find('@')
+@@ -138,16 +136,16 @@ class SourceFile:
+ 
+ 
+ class BundleManager:
+-    def __init__(self, extension: str, suffix: str, max_count: int, args, generated_sources: list[str], output_sources: list[str]):
++    def __init__(self, extension: str, suffix: str, max_count: int, args, generated_sources, output_sources):
+         self.extension = extension
+         self.suffix = suffix
+         self.file_count = 0
+         self.bundle_count = 0
+         self.current_bundle_text = ""
+         self.max_count = max_count
+-        self.extra_files: list[str] = []
+-        self._last_bundling_prefix: Optional[str] = None
+-        self._bundle_count_by_prefix: dict[str, int] = {}
++        self.extra_files = []
++        self._last_bundling_prefix = None
++        self._bundle_count_by_prefix = {}
+         self._args = args
+         self._generated_sources = generated_sources
+         self._output_sources = output_sources
+@@ -204,7 +202,7 @@ class BundleManager:
+         self.file_count += source_file.cost
+ 
+ 
+-def process_file_for_unified_source_generation(source_file: SourceFile, args, bundle_managers: dict[str, BundleManager], generated_sources: list[str], input_sources: list[str]) -> None:
++def process_file_for_unified_source_generation(source_file: SourceFile, args, bundle_managers, generated_sources, input_sources) -> None:
+     input_sources.append(str(source_file))
+ 
+     bundle = bundle_managers.get(source_file.bundle_manager_key)
+@@ -295,15 +293,15 @@ def main() -> None:
+     log(args, "Putting unified sources in {}".format(args.unified_source_output_path))
+ 
+     # Even though CMake will only pass us a single semicolon separated argument, we separate all the arguments for simplicity.
+-    source_list_files: list[Path] = []
++    source_list_files = []
+     for arg in args.source_files:
+         source_list_files.extend(Path(p) for p in arg.split(';'))
+     log(args, "Source files: {}".format(source_list_files))
+ 
+-    generated_sources: list[str] = []
+-    input_sources: list[str] = []
+-    output_sources: list[str] = []
+-    bundled_members: list[str] = []
++    generated_sources = []
++    input_sources = []
++    output_sources = []
++    bundled_members = []
+ 
+     bundle_managers = {
+         '.cpp': BundleManager('cpp', '.cpp', args.max_cpp_bundle_count, args, generated_sources, output_sources),
+-- 
+2.55.0
+
+diff --git a/Source/WebCore/css/scripts/process-css-properties.py b/Source/WebCore/css/scripts/process-css-properties.py
+index 1376d0d728e7..d1d3bb177eb6 100755
+--- a/Source/WebCore/css/scripts/process-css-properties.py
++++ b/Source/WebCore/css/scripts/process-css-properties.py
+@@ -1322,7 +1322,8 @@ class StyleProperty:
+ 
+         computed_style_type = self.codegen_properties.computed_style_type
+ 
+-        if special_cased_result := SPECIAL_CASES.get(computed_style_type):
++        special_cased_result = SPECIAL_CASES.get(computed_style_type)
++        if special_cased_result:
+             return special_cased_result
+ 
+         if computed_style_type.startswith('Style::Webkit'):
