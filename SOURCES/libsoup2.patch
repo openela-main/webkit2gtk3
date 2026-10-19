@@ -1,4 +1,4 @@
-From d8f865dc1be55d67a03b318e6554e97710aee9fa Mon Sep 17 00:00:00 2001
+From 7bc17c4d1660006628430bd4df396fc9a7750d43 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@gnome.org>
 Date: Mon, 6 Apr 2026 13:29:22 -0500
 Subject: [PATCH 1/2] Revert "[CMake] Use imported targets in the libsoup
@@ -320,7 +320,7 @@ index d8eb231b14c3..02f428f7095b 100644
 2.55.0
 
 
-From 7f8b6c57d3ad85fa33d884dda0ce4e544091effa Mon Sep 17 00:00:00 2001
+From 31c01a3062c17ab98ab39a4e401953b5edca8417 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@gnome.org>
 Date: Mon, 6 Apr 2026 13:26:24 -0500
 Subject: [PATCH 2/2] Revert "[GTK] Remove support for building against
@@ -2282,7 +2282,7 @@ index db0fb001f327..8d7c3e9d086d 100644
  Libs: -L${libdir} -lwebkit@WEBKITGTK_API_INFIX@gtk-@WEBKITGTK_API_VERSION@
  Cflags: -I${includedir}/webkitgtk-@WEBKITGTK_API_VERSION@
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index c1ec91ca6563..75bf3774f91f 100644
+index e137b7d54db2..5b96a8a38cb2 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
 @@ -13,7 +13,6 @@ list(APPEND WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS -Wno-unsafe-buffer-usage-in-forma
@@ -2352,8 +2352,8 @@ index c1ec91ca6563..75bf3774f91f 100644
 +    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 112 0 75)
 +    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 47 0 29)
 +elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "4.1")
-     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 24 3 24)
-     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 11 7 11)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 24 4 24)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 11 8 11)
  elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "6.0")
 diff --git a/Source/cmake/WebKitFeatures.cmake b/Source/cmake/WebKitFeatures.cmake
 index 2af17273af99..44f1f069e288 100644
@@ -2996,7 +2996,7 @@ index 455fbf2aab5c..1c02df223ba5 100644
  #endif
  
 diff --git a/Tools/TestWebKitAPI/Tests/WebKit/WKWebView/glib/TestWebKitWebView.cpp b/Tools/TestWebKitAPI/Tests/WebKit/WKWebView/glib/TestWebKitWebView.cpp
-index ac8a14248b9f..244e7af09605 100644
+index f0f0b2401458..e61af8d18107 100644
 --- a/Tools/TestWebKitAPI/Tests/WebKit/WKWebView/glib/TestWebKitWebView.cpp
 +++ b/Tools/TestWebKitAPI/Tests/WebKit/WKWebView/glib/TestWebKitWebView.cpp
 @@ -21,6 +21,7 @@
@@ -3007,7 +3007,7 @@ index ac8a14248b9f..244e7af09605 100644
  #include <glib/gstdio.h>
  #include <wtf/glib/GRefPtr.h>
  #include <wtf/glib/GSpanExtras.h>
-@@ -2285,7 +2286,11 @@ static void testWebViewLoadAlternateHTMLFromPageWithCSP(WebViewTest* test, gcons
+@@ -2473,7 +2474,11 @@ static void testWebViewLoadAlternateHTMLFromPageWithCSP(WebViewTest* test, gcons
      g_assert_no_error(error.get());
  }
  
