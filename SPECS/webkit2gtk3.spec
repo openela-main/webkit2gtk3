@@ -6,7 +6,7 @@
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
 Name:           webkit2gtk3
-Version:        2.54.0
+Version:        2.54.1
 Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
@@ -52,8 +52,8 @@ Patch308:       icu60.patch
 ## Upstream patches to remove, hopefully after next update
 ##
 
-# https://github.com/WebKit/WebKit/pull/74262
-Patch400:       mimalloc.patch
+# https://bugs.webkit.org/show_bug.cgi?id=322394
+Patch400:          update-angle.patch
 
 # *** FRAGILE ***
 # If the build fails due to undefined reference to an atomic function, then
@@ -325,6 +325,10 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Tue Oct 13 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.54.1-1
+- Update to 2.54.1
+- Add patch to update ANGLE even further
+
 * Mon Sep 21 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.54.0-1
 - Update to 2.54.0
 
