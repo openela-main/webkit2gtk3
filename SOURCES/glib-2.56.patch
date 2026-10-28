@@ -1,4 +1,4 @@
-From cd50300b75c43c8bd3ac3bac4fb2bdc01215f525 Mon Sep 17 00:00:00 2001
+From b76527ffa90d300e5d6eb6df40e5abe1e6ccef4c Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@gnome.org>
 Date: Fri, 17 Jul 2026 02:00:00 +0200
 Subject: [PATCH] Build against GLib 2.56
@@ -7,7 +7,7 @@ Subject: [PATCH] Build against GLib 2.56
  Source/WTF/wtf/Platform.h                     |  2 +-
  Source/WTF/wtf/URL.h                          |  4 +-
  Source/WTF/wtf/glib/GRefPtr.h                 |  2 +
- Source/WTF/wtf/glib/SocketConnection.cpp      | 14 ++++++-
+ Source/WTF/wtf/glib/SocketConnection.cpp      | 13 +++++-
  Source/WTF/wtf/glib/URLGLib.cpp               |  2 +
  .../WebCore/platform/LowPowerModeNotifier.h   |  2 +
  .../glib/LowPowerModeNotifierGLib.cpp         |  8 ++++
@@ -22,17 +22,17 @@ Subject: [PATCH] Build against GLib 2.56
  Source/cmake/OptionsGTK.cmake                 |  7 +++-
  Tools/MiniBrowser/gtk/BrowserSettingsDialog.c |  3 +-
  Tools/MiniBrowser/gtk/main.c                  |  3 +-
- 18 files changed, 114 insertions(+), 16 deletions(-)
+ 18 files changed, 113 insertions(+), 16 deletions(-)
 
 diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
-index 0c3ba74482f6..57a1b5126290 100644
+index e4b8e2e5c196..57a1b5126290 100644
 --- a/Source/WTF/wtf/Platform.h
 +++ b/Source/WTF/wtf/Platform.h
 @@ -92,7 +92,7 @@
  
  #if USE(GLIB)
  #define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_56
--#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_70
+-#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_74
 +#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_56
  #endif
  
@@ -74,7 +74,7 @@ index 56612d08085b..74c10c378deb 100644
  WTF_DEFINE_GREF_TRAITS_INLINE(GVariant, g_variant_ref_sink, g_variant_unref, g_variant_is_floating)
  
 diff --git a/Source/WTF/wtf/glib/SocketConnection.cpp b/Source/WTF/wtf/glib/SocketConnection.cpp
-index dc3e7091b8d2..b4051906333f 100644
+index dc3e7091b8d2..d24dfa299f2d 100644
 --- a/Source/WTF/wtf/glib/SocketConnection.cpp
 +++ b/Source/WTF/wtf/glib/SocketConnection.cpp
 @@ -166,7 +166,18 @@ bool SocketConnection::readMessage()
@@ -97,11 +97,6 @@ index dc3e7091b8d2..b4051906333f 100644
              if (messageIsByteSwapped(flags))
                  parameters = adoptGRef(g_variant_byteswap(parameters.get()));
          }
-@@ -291,3 +302,4 @@ void SocketConnection::didClose()
- }
- 
- } // namespace WTF
-+
 diff --git a/Source/WTF/wtf/glib/URLGLib.cpp b/Source/WTF/wtf/glib/URLGLib.cpp
 index 589dc1b52f8f..f67fe780f333 100644
 --- a/Source/WTF/wtf/glib/URLGLib.cpp
@@ -483,7 +478,7 @@ index 6637fc554bbd..43d529f1e21b 100644
          issuer = certificate.get();
          i++;
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index 6b46cb3bda58..7c4d66c3d7ff 100644
+index 0070581536bf..2c987e4ccc3c 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
 @@ -11,7 +11,7 @@ set(ENABLE_UNSAFE_BUFFER_USAGE_WARNING OFF)
@@ -547,5 +542,5 @@ index 8722194f5a30..fc7855a61ef1 100644
      }
  
 -- 
-2.55.0
+2.56.0
 
