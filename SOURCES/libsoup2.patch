@@ -1,4 +1,4 @@
-From 7bc17c4d1660006628430bd4df396fc9a7750d43 Mon Sep 17 00:00:00 2001
+From c328bacb80fe1928e56d72478be3e9df94d04901 Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@gnome.org>
 Date: Mon, 6 Apr 2026 13:29:22 -0500
 Subject: [PATCH 1/2] Revert "[CMake] Use imported targets in the libsoup
@@ -270,10 +270,10 @@ index e7cc9235343a..0c4f474e0f30 100644
      WebKit::WebKit
  )
 diff --git a/Tools/TestWebKitAPI/PlatformGTK.cmake b/Tools/TestWebKitAPI/PlatformGTK.cmake
-index 045b11550a4c..0a2ed6212900 100644
+index 3b94fe658403..27baa79a6ebf 100644
 --- a/Tools/TestWebKitAPI/PlatformGTK.cmake
 +++ b/Tools/TestWebKitAPI/PlatformGTK.cmake
-@@ -57,10 +57,12 @@ list(APPEND TestWebCore_SOURCES
+@@ -58,10 +58,12 @@ list(APPEND TestWebCore_SOURCES
  )
  
  list(APPEND TestWebCore_SYSTEM_INCLUDE_DIRECTORIES
@@ -317,10 +317,10 @@ index d8eb231b14c3..02f428f7095b 100644
          ${WEBKIT_DIR}/WPEPlatform
          ${WPEPlatform_DERIVED_SOURCES_DIR}
 -- 
-2.55.0
+2.56.0
 
 
-From 31c01a3062c17ab98ab39a4e401953b5edca8417 Mon Sep 17 00:00:00 2001
+From 449372bd1da66ace64f229cb873247608f9e7f3a Mon Sep 17 00:00:00 2001
 From: Michael Catanzaro <mcatanzaro@gnome.org>
 Date: Mon, 6 Apr 2026 13:26:24 -0500
 Subject: [PATCH 2/2] Revert "[GTK] Remove support for building against
@@ -379,7 +379,7 @@ This reverts commit 6153cafaf3bd0db47a50f088e752e73a39d40921.
  create mode 100644 Source/WebCore/platform/network/soup/SoupVersioning.h
 
 diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
-index 0c3ba74482f6..b81fc91c687a 100644
+index e4b8e2e5c196..d3d96c597d20 100644
 --- a/Source/WTF/wtf/Platform.h
 +++ b/Source/WTF/wtf/Platform.h
 @@ -104,8 +104,12 @@
@@ -396,7 +396,7 @@ index 0c3ba74482f6..b81fc91c687a 100644
  #if PLATFORM(COCOA)
  /* Cocoa defines a series of platform macros for debugging. */
 diff --git a/Source/WTF/wtf/PlatformEnableGlib.h b/Source/WTF/wtf/PlatformEnableGlib.h
-index e027ff473c43..b16f74979c5e 100644
+index 9d1d7a64351a..9c81f6b4ff54 100644
 --- a/Source/WTF/wtf/PlatformEnableGlib.h
 +++ b/Source/WTF/wtf/PlatformEnableGlib.h
 @@ -55,10 +55,6 @@
@@ -1341,7 +1341,7 @@ index 6eeacdeb1dfc..3061c8eb7cdd 100644
  
  } // namespace WebDriver
 diff --git a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
-index ca86b7c69e71..5261462cbf62 100644
+index 923518ce0b5d..d1bc66fddd2a 100644
 --- a/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
 +++ b/Source/WebKit/NetworkProcess/soup/NetworkDataTaskSoup.cpp
 @@ -45,6 +45,7 @@
@@ -1506,7 +1506,7 @@ index ca86b7c69e71..5261462cbf62 100644
      g_cancellable_cancel(m_cancellable.get());
  
      if (isDownload())
-@@ -429,6 +490,10 @@ void NetworkDataTaskSoup::didSendRequest(GRefPtr<GInputStream>&& inputStream)
+@@ -424,6 +485,10 @@ void NetworkDataTaskSoup::didSendRequest(GRefPtr<GInputStream>&& inputStream)
      else
          m_inputStream = WTF::move(inputStream);
  
@@ -1517,7 +1517,7 @@ index ca86b7c69e71..5261462cbf62 100644
      dispatchDidReceiveResponse();
  }
  
-@@ -473,6 +538,7 @@ void NetworkDataTaskSoup::dispatchDidReceiveResponse()
+@@ -468,6 +533,7 @@ void NetworkDataTaskSoup::dispatchDidReceiveResponse()
      });
  }
  
@@ -1525,7 +1525,7 @@ index ca86b7c69e71..5261462cbf62 100644
  void NetworkDataTaskSoup::preconnectCallback(SoupSession* session, GAsyncResult* result, NetworkDataTaskSoup* task)
  {
      RefPtr<NetworkDataTaskSoup> protectedThis = adoptRef(task);
-@@ -488,12 +554,33 @@ void NetworkDataTaskSoup::preconnectCallback(SoupSession* session, GAsyncResult*
+@@ -483,12 +549,33 @@ void NetworkDataTaskSoup::preconnectCallback(SoupSession* session, GAsyncResult*
      task->clearRequest();
      task->dispatchDidCompleteWithError(resourceError);
  }
@@ -1559,7 +1559,7 @@ index ca86b7c69e71..5261462cbf62 100644
  gboolean NetworkDataTaskSoup::acceptCertificateCallback(SoupMessage* message, GTlsCertificate* certificate, GTlsCertificateFlags errors, NetworkDataTaskSoup* task)
  {
      if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client)
-@@ -503,6 +590,7 @@ gboolean NetworkDataTaskSoup::acceptCertificateCallback(SoupMessage* message, GT
+@@ -498,6 +585,7 @@ gboolean NetworkDataTaskSoup::acceptCertificateCallback(SoupMessage* message, GT
  
      return task->acceptCertificate(certificate, errors);
  }
@@ -1567,7 +1567,7 @@ index ca86b7c69e71..5261462cbf62 100644
  
  bool NetworkDataTaskSoup::acceptCertificate(GTlsCertificate* certificate, GTlsCertificateFlags tlsErrors)
  {
-@@ -567,6 +655,26 @@ void NetworkDataTaskSoup::applyAuthenticationToRequest(ResourceRequest& request)
+@@ -562,6 +650,26 @@ void NetworkDataTaskSoup::applyAuthenticationToRequest(ResourceRequest& request)
      m_password = String();
  }
  
@@ -1594,7 +1594,7 @@ index ca86b7c69e71..5261462cbf62 100644
  gboolean NetworkDataTaskSoup::authenticateCallback(SoupMessage* soupMessage, SoupAuth* soupAuth, gboolean retrying, NetworkDataTaskSoup* task)
  {
      if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
-@@ -578,6 +686,7 @@ gboolean NetworkDataTaskSoup::authenticateCallback(SoupMessage* soupMessage, Sou
+@@ -573,6 +681,7 @@ gboolean NetworkDataTaskSoup::authenticateCallback(SoupMessage* soupMessage, Sou
      task->authenticate(AuthenticationChallenge(soupMessage, soupAuth, retrying));
      return TRUE;
  }
@@ -1602,7 +1602,7 @@ index ca86b7c69e71..5261462cbf62 100644
  
  static inline bool isAuthenticationFailureStatusCode(int httpStatusCode)
  {
-@@ -597,13 +706,21 @@ void NetworkDataTaskSoup::completeAuthentication(const AuthenticationChallenge&
+@@ -592,13 +701,21 @@ void NetworkDataTaskSoup::completeAuthentication(const AuthenticationChallenge&
          soup_auth_authenticate(challenge.soupAuth(), credential.user().utf8().data(), credential.password().utf8().data());
          break;
      case ProtectionSpace::AuthenticationScheme::ClientCertificatePINRequested: {
@@ -1624,7 +1624,7 @@ index ca86b7c69e71..5261462cbf62 100644
          break;
      case ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested:
      case ProtectionSpace::AuthenticationScheme::Unknown:
-@@ -624,10 +741,18 @@ void NetworkDataTaskSoup::cancelAuthentication(const AuthenticationChallenge& ch
+@@ -619,10 +736,18 @@ void NetworkDataTaskSoup::cancelAuthentication(const AuthenticationChallenge& ch
          soup_auth_cancel(challenge.soupAuth());
          break;
      case ProtectionSpace::AuthenticationScheme::ClientCertificatePINRequested:
@@ -1643,7 +1643,7 @@ index ca86b7c69e71..5261462cbf62 100644
          break;
      case ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested:
      case ProtectionSpace::AuthenticationScheme::Unknown:
-@@ -662,6 +787,10 @@ void NetworkDataTaskSoup::authenticate(AuthenticationChallenge&& challenge)
+@@ -657,6 +782,10 @@ void NetworkDataTaskSoup::authenticate(AuthenticationChallenge&& challenge)
          }
      }
  
@@ -1654,7 +1654,7 @@ index ca86b7c69e71..5261462cbf62 100644
      // We could also do this before we even start the request, but that would be at the expense
      // of all request latency, versus a one-time latency for the small subset of requests that
      // use HTTP authentication. In the end, this doesn't matter much, because persistent credentials
-@@ -716,6 +845,10 @@ void NetworkDataTaskSoup::continueAuthenticate(AuthenticationChallenge&& challen
+@@ -711,6 +840,10 @@ void NetworkDataTaskSoup::continueAuthenticate(AuthenticationChallenge&& challen
              completeAuthentication(challenge, credential);
          } else
              cancelAuthentication(challenge);
@@ -1665,7 +1665,7 @@ index ca86b7c69e71..5261462cbf62 100644
      });
  }
  
-@@ -783,7 +916,11 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
+@@ -778,7 +911,11 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
  
      static const unsigned maxRedirects = 20;
      if (m_currentRequest.redirectCount() > maxRedirects) {
@@ -1677,7 +1677,7 @@ index ca86b7c69e71..5261462cbf62 100644
          return;
      }
  
-@@ -861,8 +998,10 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
+@@ -856,8 +993,10 @@ void NetworkDataTaskSoup::continueHTTPRedirection()
          auto request = newRequest;
          if (request.url().protocolIsInHTTPFamily()) {
              m_networkLoadMetrics.fetchStart = { };
@@ -1688,7 +1688,7 @@ index ca86b7c69e71..5261462cbf62 100644
              applyAuthenticationToRequest(request);
  
              if (!request.hasHTTPHeaderField(HTTPHeaderName::UserAgent))
-@@ -1036,13 +1175,16 @@ static AtomString soupHTTPVersionToString(SoupHTTPVersion version)
+@@ -1031,13 +1170,16 @@ static AtomString soupHTTPVersionToString(SoupHTTPVersion version)
          return "http/1.0"_s;
      case SOUP_HTTP_1_1:
          return "http/1.1"_s;
@@ -1705,7 +1705,7 @@ index ca86b7c69e71..5261462cbf62 100644
  static String tlsProtocolVersionToString(GTlsProtocolVersion version)
  {
      switch (version) {
-@@ -1066,6 +1208,7 @@ static String tlsProtocolVersionToString(GTlsProtocolVersion version)
+@@ -1061,6 +1203,7 @@ static String tlsProtocolVersionToString(GTlsProtocolVersion version)
  
      return { };
  }
@@ -1713,7 +1713,7 @@ index ca86b7c69e71..5261462cbf62 100644
  
  WebCore::AdditionalNetworkLoadMetricsForWebInspector& NetworkDataTaskSoup::additionalNetworkLoadMetricsForWebInspector()
  {
-@@ -1074,6 +1217,15 @@ WebCore::AdditionalNetworkLoadMetricsForWebInspector& NetworkDataTaskSoup::addit
+@@ -1069,6 +1212,15 @@ WebCore::AdditionalNetworkLoadMetricsForWebInspector& NetworkDataTaskSoup::addit
      return *m_networkLoadMetrics.additionalNetworkLoadMetricsForWebInspector;
  }
  
@@ -1729,7 +1729,7 @@ index ca86b7c69e71..5261462cbf62 100644
  void NetworkDataTaskSoup::didGetHeaders()
  {
      // We are a bit more conservative with the persistent credential storage than the session store,
-@@ -1087,6 +1239,7 @@ void NetworkDataTaskSoup::didGetHeaders()
+@@ -1082,6 +1234,7 @@ void NetworkDataTaskSoup::didGetHeaders()
          m_credentialForPersistentStorage = Credential();
      }
  
@@ -1737,7 +1737,7 @@ index ca86b7c69e71..5261462cbf62 100644
      auto* metrics = soup_message_get_metrics(m_soupMessage.get());
      auto responseStart = Seconds::fromMicroseconds(soup_message_metrics_get_response_start(metrics));
      auto responseStartTime = MonotonicTime::fromRawSeconds(responseStart.seconds());
-@@ -1104,6 +1257,7 @@ void NetworkDataTaskSoup::didGetHeaders()
+@@ -1099,6 +1252,7 @@ void NetworkDataTaskSoup::didGetHeaders()
      }
  
      m_networkLoadMetrics.responseStart = responseStartTime;
@@ -1745,7 +1745,7 @@ index ca86b7c69e71..5261462cbf62 100644
  
      // Soup adds more headers to the request after starting signal is emitted, and got-headers
      // is the first one we receive after starting, so we use it also to get information about the
-@@ -1121,6 +1275,7 @@ void NetworkDataTaskSoup::didGetHeaders()
+@@ -1116,6 +1270,7 @@ void NetworkDataTaskSoup::didGetHeaders()
          additionalMetrics.requestHeaders = WTF::move(requestHeaders);
  
          additionalMetrics.priority = toNetworkLoadPriority(soup_message_get_priority(m_soupMessage.get()));
@@ -1753,7 +1753,7 @@ index ca86b7c69e71..5261462cbf62 100644
          additionalMetrics.connectionIdentifier = String::number(soup_message_get_connection_id(m_soupMessage.get()));
          auto* address = soup_message_get_remote_address(m_soupMessage.get());
          if (G_IS_INET_SOCKET_ADDRESS(address)) {
-@@ -1130,11 +1285,27 @@ void NetworkDataTaskSoup::didGetHeaders()
+@@ -1125,11 +1280,27 @@ void NetworkDataTaskSoup::didGetHeaders()
          additionalMetrics.tlsProtocol = tlsProtocolVersionToString(soup_message_get_tls_protocol_version(m_soupMessage.get()));
          additionalMetrics.tlsCipher = String::fromUTF8(soup_message_get_tls_ciphersuite_name(m_soupMessage.get()));
          additionalMetrics.responseHeaderBytesReceived = soup_message_metrics_get_response_header_bytes_received(metrics);
@@ -1781,7 +1781,7 @@ index ca86b7c69e71..5261462cbf62 100644
  void NetworkDataTaskSoup::wroteHeadersCallback(SoupMessage* soupMessage, NetworkDataTaskSoup* task)
  {
      if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
-@@ -1190,22 +1361,35 @@ gboolean NetworkDataTaskSoup::requestCertificatePasswordCallback(SoupMessage* so
+@@ -1185,22 +1356,35 @@ gboolean NetworkDataTaskSoup::requestCertificatePasswordCallback(SoupMessage* so
      task->authenticate(AuthenticationChallenge(soupMessage, tlsPassword));
      return TRUE;
  }
@@ -1817,7 +1817,7 @@ index ca86b7c69e71..5261462cbf62 100644
  }
  
  void NetworkDataTaskSoup::download()
-@@ -1348,6 +1532,62 @@ void NetworkDataTaskSoup::didFail(const ResourceError& error)
+@@ -1343,6 +1527,62 @@ void NetworkDataTaskSoup::didFail(const ResourceError& error)
      dispatchDidCompleteWithError(error);
  }
  
@@ -1880,7 +1880,7 @@ index ca86b7c69e71..5261462cbf62 100644
  void NetworkDataTaskSoup::startingCallback(SoupMessage* soupMessage, NetworkDataTaskSoup* task)
  {
      if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client)
-@@ -1357,6 +1597,8 @@ void NetworkDataTaskSoup::startingCallback(SoupMessage* soupMessage, NetworkData
+@@ -1352,6 +1592,8 @@ void NetworkDataTaskSoup::startingCallback(SoupMessage* soupMessage, NetworkData
      task->didStartRequest();
  }
  
@@ -1889,7 +1889,7 @@ index ca86b7c69e71..5261462cbf62 100644
  bool NetworkDataTaskSoup::shouldAllowHSTSPolicySetting() const
  {
      // Follow Apple's HSTS abuse mitigation 1:
-@@ -1380,7 +1622,11 @@ void NetworkDataTaskSoup::protocolUpgradedViaHSTS(SoupMessage* soupMessage)
+@@ -1375,7 +1617,11 @@ void NetworkDataTaskSoup::protocolUpgradedViaHSTS(SoupMessage* soupMessage)
      continueHTTPRedirection();
  }
  
@@ -1901,7 +1901,7 @@ index ca86b7c69e71..5261462cbf62 100644
  {
      if (task->state() == State::Canceling || task->state() == State::Completed || !task->m_client) {
          task->clearRequest();
-@@ -1391,8 +1637,15 @@ void NetworkDataTaskSoup::hstsEnforced(SoupMessage* soupMessage, NetworkDataTask
+@@ -1386,8 +1632,15 @@ void NetworkDataTaskSoup::hstsEnforced(SoupMessage* soupMessage, NetworkDataTask
          task->protocolUpgradedViaHSTS(soupMessage);
  }
  
@@ -1917,7 +1917,7 @@ index ca86b7c69e71..5261462cbf62 100644
      auto* metrics = soup_message_get_metrics(m_soupMessage.get());
      auto domainLookupStart = Seconds::fromMicroseconds(soup_message_metrics_get_dns_start(metrics));
      auto domainLookupEnd = Seconds::fromMicroseconds(soup_message_metrics_get_dns_end(metrics));
-@@ -1410,6 +1663,7 @@ void NetworkDataTaskSoup::didStartRequest()
+@@ -1405,6 +1658,7 @@ void NetworkDataTaskSoup::didStartRequest()
      else
          m_networkLoadMetrics.secureConnectionStart = MonotonicTime::fromRawSeconds(secureConnectionStart.seconds());
      m_networkLoadMetrics.requestStart = MonotonicTime::fromRawSeconds(requestStart.seconds());
@@ -1925,7 +1925,7 @@ index ca86b7c69e71..5261462cbf62 100644
  }
  
  void NetworkDataTaskSoup::restartedCallback(SoupMessage* soupMessage, NetworkDataTaskSoup* task)
-@@ -1426,9 +1680,13 @@ void NetworkDataTaskSoup::restartedCallback(SoupMessage* soupMessage, NetworkDat
+@@ -1421,9 +1675,13 @@ void NetworkDataTaskSoup::restartedCallback(SoupMessage* soupMessage, NetworkDat
  void NetworkDataTaskSoup::didRestart()
  {
      m_networkLoadMetrics = NetworkLoadMetrics::emptyMetrics();
@@ -2282,7 +2282,7 @@ index db0fb001f327..8d7c3e9d086d 100644
  Libs: -L${libdir} -lwebkit@WEBKITGTK_API_INFIX@gtk-@WEBKITGTK_API_VERSION@
  Cflags: -I${includedir}/webkitgtk-@WEBKITGTK_API_VERSION@
 diff --git a/Source/cmake/OptionsGTK.cmake b/Source/cmake/OptionsGTK.cmake
-index e137b7d54db2..5b96a8a38cb2 100644
+index d2b3d06ed0c2..41b067f7975d 100644
 --- a/Source/cmake/OptionsGTK.cmake
 +++ b/Source/cmake/OptionsGTK.cmake
 @@ -13,7 +13,6 @@ list(APPEND WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS -Wno-unsafe-buffer-usage-in-forma
@@ -2352,8 +2352,8 @@ index e137b7d54db2..5b96a8a38cb2 100644
 +    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 112 0 75)
 +    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 47 0 29)
 +elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "4.1")
-     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 24 4 24)
-     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 11 8 11)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 24 5 24)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 11 9 11)
  elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "6.0")
 diff --git a/Source/cmake/WebKitFeatures.cmake b/Source/cmake/WebKitFeatures.cmake
 index 2af17273af99..44f1f069e288 100644
@@ -3171,5 +3171,5 @@ index a0ab5439a86d..1e80c652dbc0 100644
      RefPtr<WorkQueue> m_queue;
  };
 -- 
-2.55.0
+2.56.0
 

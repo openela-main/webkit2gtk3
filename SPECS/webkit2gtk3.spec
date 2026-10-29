@@ -19,8 +19,8 @@
 %endif
 
 Name:           webkit2gtk3
-Version:        2.54.1
-Release:        1%{?dist}
+Version:        2.54.2
+Release:        0%{?dist}.1
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -51,8 +51,7 @@ Patch:          evolution-sandbox-warning.patch
 ## Upstream patches to remove, hopefully after next update
 ##
 
-# https://bugs.webkit.org/show_bug.cgi?id=322394
-Patch:          update-angle.patch
+# No patches here currently!
 
 BuildRequires:  bison
 BuildRequires:  bubblewrap
@@ -331,6 +330,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Mon Oct 26 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.54.2-0.1
+- Update to 2.54.2
+
 * Mon Oct 12 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.54.1-1
 - Update to 2.54.1
 - Add patch to update ANGLE even further
