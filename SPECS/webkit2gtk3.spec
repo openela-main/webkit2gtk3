@@ -5,9 +5,11 @@
         mkdir -p _license_files ; \
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
+%global skia_commit aa789d9bd566
+
 Name:           webkit2gtk3
 Version:        2.54.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -18,6 +20,7 @@ Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # $ gpg --import aperez.key carlosgc.key
 # $ gpg --export --export-options export-minimal 013A0127AC9C65B34FFA62526C1009B693975393 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
+Source4:        skia-%{skia_commit}-%{version}.tar.xz
 
 Patch000:       skia-s390x.patch
 
@@ -205,7 +208,16 @@ files for developing applications that use JavaScript engine from %{name}.
 
 %prep
 %{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data='%{SOURCE0}'
-%autosetup -p1 -n webkitgtk-%{version}
+%setup -q -n webkitgtk-%{version}
+
+%if "%{?skia_commit:1}" == "1"
+rm -rf Source/ThirdParty/skia
+%setup -q -T -D -n webkitgtk-%{version} -a 4
+[ "$(cat Source/ThirdParty/skia/.webkit-version)" = "%{version}" ] ||
+    echo "WARNING: Skia tarball was built against webkitgtk $(cat Source/ThirdParty/skia/.webkit-version), not %{version}" >&2
+%endif
+
+%autopatch -p1
 
 # Remove bundled libraries
 rm -rf Source/ThirdParty/gtest/
@@ -324,6 +336,9 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Tue Nov 03 2026 Tomas Popela <tpopela@redhat.com> - 2.54.2-2
+- Update bundled Skia to aa789d9bd566
+
 * Mon Oct 26 2026 Michael Catanzaro <mcatanzaro@redhat.com> - 2.54.2-1
 - Update to 2.54.2
 
