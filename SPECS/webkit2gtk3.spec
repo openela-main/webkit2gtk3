@@ -5,11 +5,13 @@
         mkdir -p _license_files ; \
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
-%global skia_commit aa789d9bd566
+# ANGLE/Skia source tarballs: see tools/README.md
+%global angle_commit 751417514a52
+%global skia_commit ca84ce0a6f16
 
 Name:           webkit2gtk3
 Version:        2.54.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -20,9 +22,15 @@ Source1:        https://webkitgtk.org/releases/webkitgtk-%{version}.tar.xz.asc
 # $ gpg --import aperez.key carlosgc.key
 # $ gpg --export --export-options export-minimal 013A0127AC9C65B34FFA62526C1009B693975393 5AA3BC334FD7E3369E7C77B291C559DBE4C9123B > webkitgtk-keys.gpg
 Source2:        webkitgtk-keys.gpg
+Source3:        angle-%{angle_commit}-%{version}.tar.xz
 Source4:        skia-%{skia_commit}-%{version}.tar.xz
 
 Patch000:       skia-s390x.patch
+# files moved within Skia in M157
+Patch001:       skia-executors.patch
+# https://redhat.atlassian.net/browse/RHEL-290869
+# not upstreamed
+Patch002:       jsglobalobject-exception.patch
 
 ##
 ## Patches to support older build toolchain
@@ -210,6 +218,13 @@ files for developing applications that use JavaScript engine from %{name}.
 %{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data='%{SOURCE0}'
 %setup -q -n webkitgtk-%{version}
 
+%if "%{?angle_commit:1}" == "1"
+rm -rf Source/ThirdParty/ANGLE
+%setup -q -T -D -n webkitgtk-%{version} -a 3
+[ "$(cat Source/ThirdParty/ANGLE/.webkit-version)" = "%{version}" ] ||
+    echo "WARNING: ANGLE tarball was built against webkitgtk $(cat Source/ThirdParty/ANGLE/.webkit-version), not %{version}" >&2
+%endif
+
 %if "%{?skia_commit:1}" == "1"
 rm -rf Source/ThirdParty/skia
 %setup -q -T -D -n webkitgtk-%{version} -a 4
@@ -336,6 +351,12 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Fri Nov 06 2026 Tomas Popela <tpopela@redhat.com> - 2.54.2-3
+- Update bundled ANGLE to 751417514a52 and Skia to ca84ce0a6f16, both from
+  Chromium's M157 milestone.
+- Move exception handling in JSGlobalObject to fix crashes with our downstream
+  icu-67.patch
+
 * Tue Nov 03 2026 Tomas Popela <tpopela@redhat.com> - 2.54.2-2
 - Update bundled Skia to aa789d9bd566
 
