@@ -1,5 +1,5 @@
 diff --git a/Source/ThirdParty/skia/include/core/SkTypes.h b/Source/ThirdParty/skia/include/core/SkTypes.h
-index 79644da049ff..fc0646e21772 100644
+index 518f092..c12b52d 100644
 --- a/Source/ThirdParty/skia/include/core/SkTypes.h
 +++ b/Source/ThirdParty/skia/include/core/SkTypes.h
 @@ -33,6 +33,8 @@
@@ -21,19 +21,19 @@ index 79644da049ff..fc0646e21772 100644
   * SK_PMCOLOR_BYTE_ORDER can be used to query the byte order of SkPMColor at compile time.
   */
 diff --git a/Source/ThirdParty/skia/src/codec/SkCodecPriv.h b/Source/ThirdParty/skia/src/codec/SkCodecPriv.h
-index c321fb77c0ae..a0a01cccd58a 100644
+index 08c043d..856247b 100644
 --- a/Source/ThirdParty/skia/src/codec/SkCodecPriv.h
 +++ b/Source/ThirdParty/skia/src/codec/SkCodecPriv.h
-@@ -14,6 +14,7 @@
- #include "include/core/SkTypes.h"
- #include "include/private/SkEncodedInfo.h"
+@@ -17,6 +17,7 @@
+ #include "include/private/SkMalloc.h"
+ #include "include/private/SkTemplates.h"
  #include "modules/skcms/skcms.h"
 +#include "src/core/SkEndian.h"
  #include "src/codec/SkColorPalette.h"
  #include "src/core/SkColorData.h"
  
 diff --git a/Source/ThirdParty/skia/src/core/Sk4px.h b/Source/ThirdParty/skia/src/core/Sk4px.h
-index d5d481e7e300..c7ef0bcd0ed0 100644
+index fa9cf5e..39f6d5b 100644
 --- a/Source/ThirdParty/skia/src/core/Sk4px.h
 +++ b/Source/ThirdParty/skia/src/core/Sk4px.h
 @@ -27,7 +27,9 @@ public:
@@ -47,7 +47,7 @@ index d5d481e7e300..c7ef0bcd0ed0 100644
      }
      Sk4px inv() const { return Sk4px(skvx::byte16(255) - fV); }
 diff --git a/Source/ThirdParty/skia/src/core/SkColorPriv.h b/Source/ThirdParty/skia/src/core/SkColorPriv.h
-index 45471c25529e..319fec78069b 100644
+index c3242e4..49fc17b 100644
 --- a/Source/ThirdParty/skia/src/core/SkColorPriv.h
 +++ b/Source/ThirdParty/skia/src/core/SkColorPriv.h
 @@ -64,6 +64,20 @@ static inline U8CPU SkUnitScalarClampToByte(SkScalar x) {

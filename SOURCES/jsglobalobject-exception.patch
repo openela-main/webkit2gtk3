@@ -1,0 +1,54 @@
+diff --git a/Source/JavaScriptCore/runtime/JSGlobalObject.cpp b/Source/JavaScriptCore/runtime/JSGlobalObject.cpp
+index f7f90424b59c..717819f8f19e 100644
+--- a/Source/JavaScriptCore/runtime/JSGlobalObject.cpp
++++ b/Source/JavaScriptCore/runtime/JSGlobalObject.cpp
+@@ -1677,8 +1677,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
+             auto scope = DECLARE_THROW_SCOPE(vm);
+             IntlCollator* collator = IntlCollator::create(vm, globalObject->collatorStructure());
+             collator->initializeCollator(globalObject, jsUndefined(), jsUndefined());
+-            RETURN_IF_EXCEPTION(scope, void());
+             init.set(collator);
++            RETURN_IF_EXCEPTION(scope, void());
+             globalObject->m_canDoASCIIUCADUCETLocaleCompare = collator->canDoASCIIUCADUCETComparison();
+         });
+ 
+@@ -1689,8 +1689,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
+             auto scope = DECLARE_THROW_SCOPE(vm);
+             auto* dateTimeFormat = IntlDateTimeFormat::create(vm, globalObject->dateTimeFormatStructure());
+             dateTimeFormat->initializeDateTimeFormat(globalObject, jsUndefined(), jsUndefined(), IntlDateTimeFormat::RequiredComponent::Any, IntlDateTimeFormat::Defaults::All);
+-            RETURN_IF_EXCEPTION(scope, void());
+             init.set(dateTimeFormat);
++            RETURN_IF_EXCEPTION(scope, void());
+         });
+ 
+     m_defaultDateFormat.initLater(
+@@ -1700,8 +1700,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
+             auto scope = DECLARE_THROW_SCOPE(vm);
+             auto* dateTimeFormat = IntlDateTimeFormat::create(vm, globalObject->dateTimeFormatStructure());
+             dateTimeFormat->initializeDateTimeFormat(globalObject, jsUndefined(), jsUndefined(), IntlDateTimeFormat::RequiredComponent::Date, IntlDateTimeFormat::Defaults::Date);
+-            RETURN_IF_EXCEPTION(scope, void());
+             init.set(dateTimeFormat);
++            RETURN_IF_EXCEPTION(scope, void());
+         });
+ 
+     m_defaultTimeFormat.initLater(
+@@ -1711,8 +1711,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
+             auto scope = DECLARE_THROW_SCOPE(vm);
+             auto* dateTimeFormat = IntlDateTimeFormat::create(vm, globalObject->dateTimeFormatStructure());
+             dateTimeFormat->initializeDateTimeFormat(globalObject, jsUndefined(), jsUndefined(), IntlDateTimeFormat::RequiredComponent::Time, IntlDateTimeFormat::Defaults::Time);
+-            RETURN_IF_EXCEPTION(scope, void());
+             init.set(dateTimeFormat);
++            RETURN_IF_EXCEPTION(scope, void());
+         });
+ 
+     m_defaultNumberFormat.initLater(
+@@ -1722,8 +1722,8 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
+             auto scope = DECLARE_THROW_SCOPE(vm);
+             auto* numberFormat = IntlNumberFormat::create(vm, globalObject->numberFormatStructure());
+             numberFormat->initializeNumberFormat(globalObject, jsUndefined(), jsUndefined());
+-            RETURN_IF_EXCEPTION(scope, void());
+             init.set(numberFormat);
++            RETURN_IF_EXCEPTION(scope, void());
+         });
+ 
+     IntlObject* intl = IntlObject::create(vm, this, IntlObject::createStructure(vm, this, m_objectPrototype.get()));

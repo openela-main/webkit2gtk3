@@ -1220,19 +1220,40 @@ index ac87352f192c..64b62035235b 100644
 +#endif
  } // namespace WebCore
 diff --git a/Source/WebDriver/soup/HTTPServerSoup.cpp b/Source/WebDriver/soup/HTTPServerSoup.cpp
-index 86ac0010dcc9..45188492faf7 100644
+index 245eb4274589..329318797ce6 100644
 --- a/Source/WebDriver/soup/HTTPServerSoup.cpp
 +++ b/Source/WebDriver/soup/HTTPServerSoup.cpp
-@@ -60,6 +60,25 @@ bool HTTPServer::listen(const std::optional<String>& host, unsigned port)
+@@ -61,6 +61,46 @@ bool HTTPServer::listen(const std::optional<String>& host, unsigned port)
          return false;
      }
  
 +#if USE(SOUP2)
 +    soup_server_add_handler(m_soupServer.get(), nullptr, [](SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer userData) {
-+        auto* httpServer = static_cast<HTTPServer*>(userData);
++        auto& httpServer = *static_cast<HTTPServer*>(userData);
++        auto* requestHeaders = message->request_headers;
++        auto hostHeader = String::fromLatin1(soup_message_headers_get_one(requestHeaders, "Host"));
++        auto originHeader = String::fromLatin1(soup_message_headers_get_one(requestHeaders, "Origin"));
++        auto contentTypeHeader = String::fromLatin1(soup_message_headers_get_one(requestHeaders, "Content-Type"));
++        auto method = String::fromUTF8(message->method);
++        auto result = httpServer.m_requestHandler.validateRequestHeaders(hostHeader, originHeader, method, contentTypeHeader);
++        if (!result) {
++            RELEASE_LOG_ERROR(WebDriverClassic, "Rejected HTTP request: %s", result.error().utf8().data());
++            auto response = HTTPRequestHandler::rejectedRequestResponse(result.error());
++            auto responseCharacters = byteCast<char>(response.data.span());
++            soup_message_set_status(message, response.statusCode);
++            soup_message_set_response(message, response.contentType.utf8().data(), SOUP_MEMORY_COPY, responseCharacters.data(), responseCharacters.size());
++            return;
++        }
++
 +        GRefPtr<SoupMessage> protectedMessage = message;
 +        soup_server_pause_message(server, message);
-+        httpServer->m_requestHandler.handleRequest({ String::fromUTF8(message->method), String::fromUTF8(path), message->request_body->data, static_cast<size_t>(message->request_body->length) },
++
++        if (httpServer.m_visibleHost.isEmpty()) {
++            URL visibleURL { makeString("http://"_s, hostHeader) };
++            httpServer.m_visibleHost = visibleURL.isValid() ? visibleURL.host().toString() : "localhost"_s;
++        }
++
++        httpServer.m_requestHandler.handleRequest({ WTF::move(method), String::fromUTF8(path), message->request_body->data, static_cast<size_t>(message->request_body->length) },
 +            [server, message = WTF::move(protectedMessage)](HTTPRequestHandler::Response&& response) {
 +                soup_message_set_status(message.get(), response.statusCode);
 +                if (!response.data.isNull()) {
@@ -1248,8 +1269,8 @@ index 86ac0010dcc9..45188492faf7 100644
 +#else
      soup_server_add_handler(m_soupServer.get(), nullptr, [](SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer userData) {
          auto& httpServer = *static_cast<HTTPServer*>(userData);
-         GRefPtr<SoupServerMessage> protectedMessage = message;
-@@ -86,6 +105,7 @@ bool HTTPServer::listen(const std::optional<String>& host, unsigned port)
+         auto* requestHeaders = soup_server_message_get_request_headers(message);
+@@ -102,6 +142,7 @@ bool HTTPServer::listen(const std::optional<String>& host, unsigned port)
                  soup_server_unpause_message(server, message.get());
          });
      }, this, nullptr);
@@ -2210,24 +2231,68 @@ index 0b3d250d8cc9..6783d0ecf867 100644
          ${WebKitDOM_SOURCES_FOR_INTROSPECTION}
          ${WebKitWebProcessExtension_INSTALLED_HEADERS}
 diff --git a/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp b/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
-index e10439f55986..70cf73516ecd 100644
+index e488caade5b8..824ee0661301 100644
 --- a/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
 +++ b/Source/WebKit/UIProcess/Inspector/glib/RemoteInspectorHTTPServer.cpp
-@@ -29,6 +29,7 @@
+@@ -29,6 +29,8 @@
  #if ENABLE(REMOTE_INSPECTOR)
  
  #include "RemoteInspectorClient.h"
 +#include <WebCore/SoupVersioning.h>
++#include <WebCore/URLSoup.h>
  #include <wtf/FileSystem.h>
  #include <wtf/URL.h>
  #include <wtf/glib/GSpanExtras.h>
-@@ -56,14 +57,22 @@ bool RemoteInspectorHTTPServer::start(GRefPtr<GSocketAddress>&& socketAddress, u
+@@ -44,11 +46,19 @@ RemoteInspectorHTTPServer& RemoteInspectorHTTPServer::singleton()
+     return server;
+ }
+ 
++#if USE(SOUP2)
++static bool isTrustedRequest(SoupMessage* message)
++#else
+ static bool isTrustedRequest(SoupServerMessage* message)
++#endif
+ {
+     // Requiring an IP or localhost Host prevents DNS rebinding.
+     auto* requestURI = soup_server_message_get_uri(message);
++#if USE(SOUP2)
++    const char* host = requestURI ? requestURI->host : nullptr;
++#else
+     const char* host = g_uri_get_host(requestURI);
++#endif
+     if (!host || (!URL::hostIsIPAddress(StringView::fromLatin1(host)) && !equalLettersIgnoringASCIICase(StringView::fromLatin1(host), "localhost"_s)))
+         return false;
+ 
+@@ -56,7 +66,11 @@ static bool isTrustedRequest(SoupServerMessage* message)
+     if (!origin)
+         return true;
+ 
++#if USE(SOUP2)
++    return protocolHostAndPortAreEqual(URL { String::fromLatin1(origin) }, WebCore::soupURIToURL(requestURI));
++#else
+     return protocolHostAndPortAreEqual(URL { String::fromLatin1(origin) }, URL { requestURI });
++#endif
+ }
+ 
+ bool RemoteInspectorHTTPServer::start(GRefPtr<GSocketAddress>&& socketAddress, unsigned inspectorPort)
+@@ -70,20 +84,34 @@ bool RemoteInspectorHTTPServer::start(GRefPtr<GSocketAddress>&& socketAddress, u
+         return false;
      }
  
-     soup_server_add_handler(m_server.get(), nullptr,
 +#if USE(SOUP2)
++    g_signal_connect(m_server.get(), "request-read", G_CALLBACK(+[](SoupServer*, SoupMessage* message, SoupClientContext*, gpointer) {
++#else
+     g_signal_connect(m_server.get(), "request-read", G_CALLBACK(+[](SoupServer*, SoupServerMessage* message, gpointer) {
++#endif
+         if (!isTrustedRequest(message))
+             soup_server_message_set_status(message, SOUP_STATUS_FORBIDDEN, nullptr);
+     }), nullptr);
+ 
++#if USE(SOUP2)
++    soup_server_add_handler(m_server.get(), nullptr,
 +        [](SoupServer*, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer userData) {
 +#else
+     soup_server_add_handler(m_server.get(), nullptr,
          [](SoupServer*, SoupServerMessage* message, const char* path, GHashTable*, gpointer userData) {
 +#endif
              auto& httpServer = *static_cast<RemoteInspectorHTTPServer*>(userData);
@@ -2235,16 +2300,17 @@ index e10439f55986..70cf73516ecd 100644
              soup_server_message_set_status(message, status, nullptr);
          }, this, nullptr);
  
-     soup_server_add_websocket_handler(m_server.get(), "/socket", nullptr, nullptr,
 +#if USE(SOUP2)
++    soup_server_add_websocket_handler(m_server.get(), "/socket", nullptr, nullptr,
 +        [](SoupServer*, SoupWebsocketConnection* connection, const char* path, SoupClientContext*, gpointer userData) {
 +#else
+     soup_server_add_websocket_handler(m_server.get(), "/socket", nullptr, nullptr,
          [](SoupServer*, SoupServerMessage*, const char* path, SoupWebsocketConnection* connection, gpointer userData) {
 +#endif
              auto& httpServer = *static_cast<RemoteInspectorHTTPServer*>(userData);
              httpServer.handleWebSocket(path, connection);
          }, this, nullptr);
-@@ -143,8 +152,12 @@ void RemoteInspectorHTTPServer::sendMessageToFrontend(uint64_t connectionID, uin
+@@ -163,8 +191,12 @@ void RemoteInspectorHTTPServer::sendMessageToFrontend(uint64_t connectionID, uin
  
      auto utf8 = message.utf8();
      // Soup is going to copy the data immediately, so we can use g_bytes_new_static() here to avoid more data copies.
@@ -2343,7 +2409,7 @@ index d2b3d06ed0c2..41b067f7975d 100644
  else ()
      set(WEBKITGTK_API_INFIX "2")
      set(WEBKITGTK_API_VERSION "4.1")
-@@ -202,7 +226,10 @@ endif ()
+@@ -203,7 +227,10 @@ endif ()
  EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_INFIX)
  EXPOSE_STRING_VARIABLE_TO_BUILD(WEBKITGTK_API_VERSION)
  
@@ -2352,8 +2418,8 @@ index d2b3d06ed0c2..41b067f7975d 100644
 +    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 112 0 75)
 +    CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 47 0 29)
 +elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "4.1")
-     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 24 5 24)
-     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 11 9 11)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT 24 6 24)
+     CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 11 10 11)
  elseif (WEBKITGTK_API_VERSION VERSION_EQUAL "6.0")
 diff --git a/Source/cmake/WebKitFeatures.cmake b/Source/cmake/WebKitFeatures.cmake
 index 2af17273af99..44f1f069e288 100644
