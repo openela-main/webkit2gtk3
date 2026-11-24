@@ -32,8 +32,8 @@ index e4b8e2e5c196..57a1b5126290 100644
  
  #if USE(GLIB)
  #define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_56
--#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_74
-+#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_56
+-#define GLIB_VERSION_MAX_ALLOWED G_ENCODE_VERSION(2, 74)
++#define GLIB_VERSION_MAX_ALLOWED G_ENCODE_VERSION(2, 56)
  #endif
  
  #if PLATFORM(GTK)
@@ -171,7 +171,7 @@ diff --git a/Source/WebCore/platform/graphics/gstreamer/TrackPrivateBaseGStreame
 index ec74970b151f..b3c66fee06e6 100644
 --- a/Source/WebCore/platform/graphics/gstreamer/TrackPrivateBaseGStreamer.cpp
 +++ b/Source/WebCore/platform/graphics/gstreamer/TrackPrivateBaseGStreamer.cpp
-@@ -172,8 +172,14 @@ void TrackDataHolder::setPad(GRefPtr<GstPad>&& pad)
+@@ -173,8 +173,14 @@ void TrackDataHolder::setPad(GRefPtr<GstPad>&& pad)
  
      m_eventProbeClient = nullptr;
  
@@ -187,8 +187,8 @@ index ec74970b151f..b3c66fee06e6 100644
 +    }
      m_pad = WTF::move(pad);
      m_bestUpstreamPad = findBestUpstreamPad(m_pad);
-     m_gstStreamId = byteCast<Latin1Character>(unsafeSpan(gst_pad_get_stream_id(m_pad.get())));
-@@ -217,8 +223,14 @@ void TrackDataHolder::setPad(GRefPtr<GstPad>&& pad)
+     m_gstStreamId = String(GMallocString::unsafeAdoptFromUTF8(gst_pad_get_stream_id(m_pad.get())).span());
+@@ -218,8 +224,14 @@ void TrackDataHolder::setPad(GRefPtr<GstPad>&& pad)
  
  void TrackDataHolder::setStream(GRefPtr<GstStream>&& stream)
  {
@@ -205,7 +205,7 @@ index ec74970b151f..b3c66fee06e6 100644
      m_stream = WTF::move(stream);
      m_streamTagsNotifyHandlerId = g_signal_connect_data(m_stream.get(), "notify::tags", G_CALLBACK(+[](GstStream*, GParamSpec*, gpointer userData) {
          RefPtr holder = reinterpret_cast<ThreadSafeWeakPtr<TrackDataHolder>*>(userData)->get();
-@@ -295,8 +307,14 @@ void TrackDataHolder::disconnect()
+@@ -296,8 +308,14 @@ void TrackDataHolder::disconnect()
      m_taskQueue.startAborting();
  
      if (m_stream) {
@@ -222,7 +222,7 @@ index ec74970b151f..b3c66fee06e6 100644
          m_stream.clear();
      }
  
-@@ -313,8 +331,14 @@ void TrackDataHolder::disconnect()
+@@ -314,8 +332,14 @@ void TrackDataHolder::disconnect()
      }
  
      if (m_pad) {
@@ -490,9 +490,9 @@ index 0070581536bf..2c987e4ccc3c 100644
  find_package(Cairo 1.16.0 REQUIRED)
  find_package(LibGcrypt 1.7.0 REQUIRED)
  find_package(Soup3 3.0.0 REQUIRED)
-@@ -264,6 +264,11 @@ if (ENABLED_COMPILER_SANITIZERS)
-     set(ENABLE_DOCUMENTATION OFF)
- endif ()
+@@ -258,6 +258,11 @@
+ SET_AND_EXPOSE_TO_BUILD(HAVE_GL_FENCE TRUE)
+ SET_AND_EXPOSE_TO_BUILD(HAVE_GTK_UNIX_PRINTING ${GTK_UNIX_PRINT_FOUND})
  
 +# GUri is available in GLib since version 2.66, but we only want to use it if version is >= 2.67.1.
 +if (PC_GLIB_VERSION VERSION_GREATER "2.67.1" OR PC_GLIB_VERSION STREQUAL "2.67.1")

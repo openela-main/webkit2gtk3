@@ -14,10 +14,10 @@ diff --git a/Source/cmake/FindGI.cmake b/Source/cmake/FindGI.cmake
 index 8cf372f3b172..cb724a418020 100644
 --- a/Source/cmake/FindGI.cmake
 +++ b/Source/cmake/FindGI.cmake
-@@ -342,7 +342,7 @@ function(GI_INTROSPECT namespace nsversion header)
+@@ -347,7 +347,7 @@ function(GI_INTROSPECT namespace nsversion header)
          VERBATIM
          COMMAND_EXPAND_LISTS
-         COMMAND ${CMAKE_COMMAND} -E env "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS}"
+         COMMAND ${CMAKE_COMMAND} -E env ${scanner_env}
 -            "${GI_SCANNER_EXE}" --quiet --warn-all --warn-error --no-libtool
 +            "${GI_SCANNER_EXE}" --quiet --warn-all --no-libtool
              "--output=${gir_path}"

@@ -140,7 +140,7 @@ index db9e66336f35..73c9f3e76e00 100644
 +
  bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, GstVideoFormat& format, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride, double& frameRate, PlatformVideoColorSpace& colorSpace)
  {
-     if (!doCapsHaveType(caps, GST_VIDEO_CAPS_TYPE_PREFIX)) {
+     frameRate = 0;
 @@ -753,31 +772,6 @@ void deinitializeGStreamer()
      teardownVideoEncoderSingleton();
      teardownGStreamerImageDecoders();

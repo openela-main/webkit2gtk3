@@ -1,12 +1,15 @@
 From c690c2459b6b91cf0bc3f1bb46e12638aba5a5de Mon Sep 17 00:00:00 2001
 From: Tomas Popela <tpopela@redhat.com>
 Date: Fri, 6 Nov 2026 11:21:59 +0000
-Subject: [PATCH] [GTK] Fix build with Skia M157: move to
- SkExecutors::MakeFIFOThreadPool()
+Subject: [PATCH] [GTK] Fix build with Skia M158: use
+ SkFunctionalExecutors::MakeFIFOThreadPool()
 
 Skia M157 moved the FIFO thread pool factories out of the SkExecutor class
 into the SkExecutors namespace, declared in the private src/core/SkExecutors.h
 header. Include the new header and call SkExecutors::MakeFIFOThreadPool().
+
+Skia M158 then turned SkExecutors into a class template, so the factories are
+reached through the SkFunctionalExecutors alias (SkExecutors<SkExecutor>).
 
 * Source/WebCore/platform/graphics/skia/PlatformDisplaySkia.cpp:
 ---
@@ -31,7 +34,7 @@ index 22bcc67..772217c 100644
          // don't use any mipmapping, it's safe to disable that, and avoid performance hits.
          options.fSharpenMipmappedTextures = false;
 -        thread_local std::unique_ptr<SkExecutor> s_executor = SkExecutor::MakeFIFOThreadPool(2);
-+        thread_local std::unique_ptr<SkExecutor> s_executor = SkExecutors::MakeFIFOThreadPool(2);
++        thread_local std::unique_ptr<SkExecutor> s_executor = SkFunctionalExecutors::MakeFIFOThreadPool(2);
          options.fExecutor = s_executor.get();
          if (auto bytes = glyphCacheTextureMaximumBytes())
              options.fGlyphCacheTextureMaximumBytes = *bytes;

@@ -6,12 +6,12 @@
         cp -p %1 _license_files/$(echo '%1' | sed -e 's!/!.!g')
 
 # ANGLE/Skia source tarballs: see tools/README.md
-%global angle_commit 751417514a52
-%global skia_commit ca84ce0a6f16
+%global angle_commit 1f6526a566c2
+%global skia_commit 3279352fdf1f
 
 Name:           webkit2gtk3
-Version:        2.54.2
-Release:        3%{?dist}
+Version:        2.54.3
+Release:        1%{?dist}
 Summary:        GTK Web content engine library
 
 License:        LGPLv2
@@ -62,8 +62,7 @@ Patch308:       icu60.patch
 ##
 ## Upstream patches to remove, hopefully after next update
 ##
-
-# No patches currently!
+Patch400:       webkitgtk-2_54_3-buildfix.patch
 
 # *** FRAGILE ***
 # If the build fails due to undefined reference to an atomic function, then
@@ -351,6 +350,11 @@ export NINJA_STATUS="[%f/%t][%e] "
 %{_datadir}/gir-1.0/JavaScriptCore-4.0.gir
 
 %changelog
+* Thu Nov 19 2026 Tomas Popela <tpopela@redhat.com> - 2.54.3-1
+- Update to 2.54.3
+- Update bundled ANGLE to 1f6526a566c2 and Skia to 3279352fdf1f, both from
+  Chromium's M158 milestone.
+
 * Fri Nov 06 2026 Tomas Popela <tpopela@redhat.com> - 2.54.2-3
 - Update bundled ANGLE to 751417514a52 and Skia to ca84ce0a6f16, both from
   Chromium's M157 milestone.
